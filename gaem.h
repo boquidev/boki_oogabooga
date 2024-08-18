@@ -87,7 +87,7 @@ typedef enum Item_id : u16
 {
 	ITEM_NULL,
 
-	ITEM_1,
+	ITEM_STONE,
 
 	ITEM_SPELL_NULL,
 	ITEM_SPELL_PLACE_ITEM,
@@ -287,26 +287,6 @@ typedef struct App_data
 	u16 cursor_item;
 
 	u16 item_id_to_tex_uid [ITEM_LAST_ID];
-
-   u16 tex_null
-	,tex_player
-	,tex_stone
-	,tex_chest
-	,tex_shroom
-	,tex_slime
-	,tex_wand
-	,tex_spell_null
-	,tex_spell_place_item
-	,tex_spell_destroy
-
-	,mesh_plane_y_up
-   ,blend_state_enabled
-   ,rtv_lowres
-   ,depth_stencil_lowres
-   ,dynamic_mesh_tiles
-   ,vs_instancing
-   ,vs_simple
-   ;
 }App_data;
 
 
@@ -387,7 +367,7 @@ V2 size_in_pixels_to_screen(Int2 size, f32 aspect_ratio, Int2 viewport_size)
 	return v2(2*aspect_ratio*(f32)size.x/viewport_size.x, 2*(f32)size.y/viewport_size.y);
 }
 
-Int2 pos_to_tile(V2 v, V2 tiles_screen_size)
+Int2 world_pos_to_tile_pos(V2 v, V2 tiles_screen_size)
 {
    Int2 result;
    result.x = (s32)((v.x/tiles_screen_size.x)+ WORLD_X_LENGTH/2);
@@ -411,8 +391,8 @@ void destroy_tile(App_data* app, Int2 tile_pos, V2 tiles_screen_size)
 	app->entities[e_id].flags = E_PICKUP|E_RENDER;
 	u16 new_item_id = get_first_available_index(app->used_items, MAX_ITEMS);
 	app->entities[e_id].item = new_item_id;
-	//TODO: tiles will have their own item_id instead of ITEM_1
-	app->items[new_item_id] = app->items[ITEM_1];
+	//TODO: tiles will have their own item_id instead of ITEM_STONE
+	app->items[new_item_id] = app->items[ITEM_STONE];
 
 	app->entities[e_id].pos = tile_to_pos(tile_pos, tiles_screen_size);
 }
@@ -446,5 +426,14 @@ string u32_to_string(u32 n, Memory_arena* arena)
 		i--;
 	}
 	*(u8*)arena_push_size(arena, 1) = 0; // 0 ending string
+	return result;
+}
+
+
+u16 get_entity_equipped_item_index(App_data* app, u16 entity_index)
+{
+	u16 result = app->entities[entity_index].inventory.items[app->entities[entity_index].inventory.selected_slot];
+	if(!result)
+		result = app->entities[entity_index].unarmed_inventory;
 	return result;
 }

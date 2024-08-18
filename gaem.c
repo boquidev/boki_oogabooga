@@ -4,7 +4,7 @@
 
 int entry(int argc, char **argv) 
 {
-	
+	u32 counter	= 0;
 	window.title = STR("Minimal Game Example");
 	window.scaled_width = 1280; // We need to set the scaled size if we want to handle system scaling (DPI)
 	window.scaled_height = 720; 
@@ -41,7 +41,7 @@ int entry(int argc, char **argv)
 	assert(default_font, "Failed loading arial.ttf");
 
 	Memory_arena permanent_arena = {0};
-	permanent_arena.size = GIGABYTES(2); 
+	permanent_arena.size = MEGABYTES(500); 
 	permanent_arena.data = (u8*)VirtualAlloc(0, permanent_arena.size, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
 	
 	if(!permanent_arena.data){
@@ -53,7 +53,7 @@ int entry(int argc, char **argv)
 	}
 	
 	Memory_arena temp_arena = {0};
-	temp_arena.size = GIGABYTES(2); 
+	temp_arena.size = MEGABYTES(500); 
 	temp_arena.data = (u8*)VirtualAlloc(0, temp_arena.size, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
 	
 	if(!temp_arena.data){
@@ -74,7 +74,7 @@ int entry(int argc, char **argv)
 	while (!window.should_close) 
 	{
 		// THIS IS (A LOT!!) FASTER THAN MANUALLY CLEARING THE ARENA (at least with /Od in msvc, haven't compared with /O2)
-		//TODO: try memset() instead
+		//TODO: try memset()
 		VirtualFree(temp_arena.data, 0, MEM_RELEASE);
 		temp_arena.data = (u8*)VirtualAlloc(0, temp_arena.size, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
 		temp_arena.used = 0;
@@ -82,17 +82,25 @@ int entry(int argc, char **argv)
 		reset_temporary_storage();
 		os_update(); 
 
-		float aspect_ratio = (f32)window.width/(f32)window.height;
-      Int2 tiles_px_size = {8, 8};
-		V2 tiles_screen_size = size_in_pixels_to_screen(tiles_px_size, virtual_aspect_ratio, virtual_screen_size);
+		float window_aspect_ratio = (f32)window.width/(f32)window.height;
+      V2 tiles_px_size = {8, 8};
+		// V2 tiles_screen_size = size_in_pixels_to_screen(tiles_px_size, virtual_aspect_ratio, virtual_screen_size);
+
+		draw_frame.projection = m4_make_orthographic_projection(
+			-virtual_screen_size.x*0.5f, virtual_screen_size.x*0.5, 
+			-virtual_screen_size.y*0.5f, virtual_screen_size.y*0.5f, 
+			-1, 10
+		);
+
+		
 
 		if(is_key_just_pressed(KEY_F5) && is_key_down(KEY_SHIFT))
 		{
 			window.should_close = true;
 		}
 		V2 cursor_screen_pos  = {
-			.x = (input_frame.mouse_x/window.width  * 2.0 - 1.0)*virtual_aspect_ratio,
-			.y = input_frame.mouse_y/window.height * 2.0 - 1.0
+			.x = (virtual_screen_size.x * (input_frame.mouse_x/window.width - 0.5f)),
+			.y = (virtual_screen_size.y * (input_frame.mouse_y/window.height - 0.5f))
 		};
 		V2 cursor_world_pos = v2_add(app->camera_pos, cursor_screen_pos);
 
@@ -102,17 +110,17 @@ int entry(int argc, char **argv)
 		{
 			//:CREATE WORLD
 			
-			f32* temp_texture = arena_push_structs(&temp_arena, f32, WORLD_X_LENGTH*WORLD_Y_LENGTH);
+			f32* noise_texture = arena_push_structs(&temp_arena, f32, WORLD_X_LENGTH*WORLD_Y_LENGTH);
 			UNTIL(i, WORLD_X_LENGTH*WORLD_Y_LENGTH)
 			{
-				temp_texture[i] = get_random_float32_in_range(0.0f, 1.0f);
+				noise_texture[i] = get_random_float32_in_range(0.0f, 1.0f);
 			}
 
 			UNTIL(y, WORLD_Y_LENGTH)
 			{
 				UNTIL(x, WORLD_X_LENGTH)
 				{
-					f32 noise_value = sample_2d_perlin_noise(temp_texture, WORLD_X_LENGTH, WORLD_Y_LENGTH, x, y, 1, WORLD_X_LENGTH/5, .75f);
+					f32 noise_value = sample_2d_perlin_noise(noise_texture, WORLD_X_LENGTH, WORLD_Y_LENGTH, x, y, 1, WORLD_X_LENGTH/5, .75f);
 					{
 						// u32 types_count = 2; 
 						// app->world[y][x] = (u8)((u8)(noise_value*types_count)*(256/types_count));
@@ -136,6 +144,12 @@ int entry(int argc, char **argv)
 			//TODO: i think this is not necessary anymore but need to check
 			app->ui.selection = NULL_UI_SELECTION;
 
+			app->item_id_to_tex_uid[ITEM_STONE] = TEX_STONE;
+			app->item_id_to_tex_uid[ITEM_WAND] = TEX_WAND;
+			app->item_id_to_tex_uid[ITEM_SPELL_NULL] = TEX_SPELL_NULL;
+			app->item_id_to_tex_uid[ITEM_SPELL_PLACE_ITEM] = TEX_SPELL_PLACE_ITEM;
+			app->item_id_to_tex_uid[ITEM_SPELL_DESTROY] = TEX_SPELL_DESTROY_TILE;
+
 			//:INITIALIZE STATIC ITEMS
 			UNTIL(id, ITEM_LAST_ID)
 			{
@@ -151,7 +165,7 @@ int entry(int argc, char **argv)
 					case ITEM_SPELL_LAST: 
 					break;
 					
-					case ITEM_1: 
+					case ITEM_STONE: 
 					{
 						app->items[id].inventory.size = 2;
 						app->items[id].inventory.items[0] = ITEM_SPELL_DESTROY;
@@ -263,9 +277,9 @@ int entry(int argc, char **argv)
 			app->ui.selection.pressed2 = NULL_INDEX16;
 		}
 
-		// AAAAAAAAAAAAAAAAAAAA
+		//:UPDATING UI
 
-		// ROOT WIDGET
+		//:ROOT WIDGET
 		ui_push(&app->ui, do_widget(&app->ui, UI_SKIP_RENDERING, STYLE_NULL));
 		{
 			u32 rows = 1;
@@ -277,14 +291,14 @@ int entry(int argc, char **argv)
 				visible_slots_count = INVENTORY_SIZE;
 			}
 
-			f32 slots_size = .15f;
+			f32 slots_size = 15;
 			
 			Ui_style test_style = {0};
 			test_style.layout = UI_LAYOUT_GRID_ROW_MAJOR;
 			test_style.line_size = INVENTORY_ROWS_LENGTH;
-			test_style.cells_border_size = 0.005f;
-			test_style.size = (V2){1.5f, slots_size*rows};
-			test_style.pos = (V2){-test_style.size.x/2, .9f - slots_size*rows};
+			test_style.cells_border_size = 1.0f;
+			test_style.size = (V2){slots_size*10, slots_size*rows};
+			test_style.pos = (V2){-test_style.size.x/2, (virtual_screen_size.y/2)-1 - slots_size*rows};
 			test_style.color_rect = (Color){.8f,.8f,.8f,1};
 			ui_push(&app->ui, do_widget(&app->ui, 0, test_style));
 
@@ -354,9 +368,9 @@ int entry(int argc, char **argv)
 			test_style.layout = UI_LAYOUT_GRID_ROW_MAJOR;
 			test_style.line_size = INVENTORY_ROWS_LENGTH;
 			test_style.line_size = app->items[equipped_item].inventory.size;
-			test_style.cells_border_size = 0.005f;
+			test_style.cells_border_size = 1.0f;
 			test_style.size = (V2){slots_size*app->items[equipped_item].inventory.size, slots_size};
-			test_style.pos = (V2){virtual_aspect_ratio-test_style.size.x - .01f, -.99f};
+			test_style.pos = (V2){(virtual_screen_size.x/2)-test_style.size.x - 1, -virtual_screen_size.y/2};
 			test_style.color_rect = (Color){.8f,.8f,.8f,1};
 
 			ui_push(&app->ui, do_widget(&app->ui, spells_ui_flags, test_style));
@@ -441,30 +455,59 @@ int entry(int argc, char **argv)
 					app->ui.global_positions[parent_uid].y + app->ui.widgets[parent_uid].style.size.y - x_cell_size
 				};
 				app->ui.global_positions[i] = v2_add(parent_upper_left_corner, v2(x_pos, -y_pos));
-				app->ui.widgets[i].style.size = (V2){x_cell_size, x_cell_size};
+				app->ui.widgets[i].style.size = v2(x_cell_size, x_cell_size);
 			}
 		}
 
-
 		//:UI END
+
 		Int2 cursor_tile_pos;
 		if(!is_mouse_in_ui){
-			cursor_tile_pos.x = (int)((cursor_world_pos.x) / tiles_screen_size.x) + WORLD_X_LENGTH/2;
-			cursor_tile_pos.y = (int)((cursor_world_pos.y) / tiles_screen_size.y) + WORLD_Y_LENGTH/2;
+			cursor_tile_pos = world_pos_to_tile_pos(cursor_world_pos, tiles_px_size);
 		}else{
 			cursor_tile_pos = (Int2){NULL_INDEX16, NULL_INDEX16};
 		}
 
-		app->entities[E_PLAYER_INDEX].move_direction = normalized_input_direction;
-		app->entities[E_PLAYER_INDEX].movement_speed = 0.5f;
-		if(is_key_down(KEY_SHIFT) > 0)
+		
 		{
-			app->entities[E_PLAYER_INDEX].movement_speed = 10.0f;
+			//TODO: this will be moving across the spells inventory
+			u16 equipped_item = get_entity_equipped_item_index(app, E_PLAYER_INDEX);
+			app->items[equipped_item].inventory.selected_slot = 0;
+
+			app->entities[E_PLAYER_INDEX].target_direction = v2_normalize(v2_sub(cursor_world_pos, app->entities[E_PLAYER_INDEX].pos));
+			if(!is_mouse_in_ui)
+			{
+				if(is_key_down(MOUSE_BUTTON_LEFT) || is_key_down(MOUSE_BUTTON_RIGHT))
+				{
+						app->entities[E_PLAYER_INDEX].is_casting = true;
+					if(is_key_down(MOUSE_BUTTON_RIGHT))
+					{
+						app->items[equipped_item].inventory.selected_slot = app->items[equipped_item].inventory.size - 1;
+					}
+				}
+
+				if(is_key_just_pressed(KEY_F1) == 1)
+				{
+					u16 debug_wand_pickup_uid = get_first_available_index(app->used_entities, MAX_ENTITIES);
+					app->entities[debug_wand_pickup_uid].flags = E_RENDER|E_PICKUP;
+					u16 debug_wand_item_uid = get_first_available_index(app->used_items, MAX_ITEMS);
+					app->entities[debug_wand_pickup_uid].item = debug_wand_item_uid;
+					app->items[debug_wand_item_uid] = app->items[ITEM_WAND];
+
+					app->entities[debug_wand_pickup_uid].pos = cursor_world_pos;
+				}
+			}
 		}
 
+		app->entities[E_PLAYER_INDEX].move_direction = normalized_input_direction;
+		app->entities[E_PLAYER_INDEX].movement_speed = 40;
+		if(is_key_down(KEY_SHIFT) > 0)
+		{
+			app->entities[E_PLAYER_INDEX].movement_speed = 200.0f;
+		}
 		
 		//:UPDATE ENTITIES
-		#define DEFAULT_RANGE 0.2f
+		#define DEFAULT_RANGE (2*tiles_px_size.x)
 		
 		UNTIL(e, MAX_ENTITIES)
 		{
@@ -474,7 +517,7 @@ int entry(int argc, char **argv)
 				app->entities[e].casting_cooldown -= fixed_dt;
 				if(app->entities[e].is_casting && app->entities[e].casting_cooldown <= 0)
 				{
-					app->entities[e].casting_cooldown = .5f;
+					app->entities[e].casting_cooldown = 0.5f;
 					
 					u16 equipped_item = app->entities[e].inventory.items[app->entities[e].inventory.selected_slot];
 					if(!equipped_item){
@@ -489,7 +532,7 @@ int entry(int argc, char **argv)
 						case ITEM_SPELL_PLACE_ITEM:
 						{
 							V2 placing_world_pos = v2_add(app->entities[e].pos, v2_mulf(app->entities[e].target_direction, DEFAULT_RANGE));
-							Int2 placing_tilemap_pos = pos_to_tile(placing_world_pos, tiles_screen_size);
+							Int2 placing_tilemap_pos = world_pos_to_tile_pos(placing_world_pos, tiles_px_size);
 
 							if(!app->world[placing_tilemap_pos.y][placing_tilemap_pos.x])
 							{
@@ -515,10 +558,10 @@ int entry(int argc, char **argv)
 							UNTIL(step, 10)
 							{
 								V2 test_world_pos = v2_add(current_pos , v2_mulf(app->entities[e].target_direction, (step*DEFAULT_RANGE/10)));
-								Int2 test_tilemap_pos = pos_to_tile(test_world_pos, tiles_screen_size);
+								Int2 test_tilemap_pos = world_pos_to_tile_pos(test_world_pos, tiles_px_size);
 								if(app->world[test_tilemap_pos.y][test_tilemap_pos.x])
 								{
-									destroy_tile(app, test_tilemap_pos, tiles_screen_size);
+									destroy_tile(app, test_tilemap_pos, tiles_px_size);
 									break;
 								}
 							}
@@ -539,7 +582,7 @@ int entry(int argc, char **argv)
 						{
 							
 							f32 distance = v2_length(v2_sub(app->entities[e2].pos, app->entities[e].pos));
-							if(distance < 0.1f)
+							if(distance < tiles_px_size.x)
 							{
 								u16 first_empty_slot = NULL_INDEX16;
 								u16 total_count = 0;
@@ -595,24 +638,25 @@ int entry(int argc, char **argv)
 				//:UPDATE ENTITY POSITIONS
 
 				V2 new_pos = v2_add(app->entities[e].pos, (v2_mulf(app->entities[e].move_direction, app->entities[e].movement_speed*fixed_dt)));
-				Int2 tile_pos = pos_to_tile(new_pos, tiles_screen_size);
+				Int2 tile_pos = world_pos_to_tile_pos(new_pos, tiles_px_size);
 				
 				if(!app->world[tile_pos.y][tile_pos.x]){
 					app->entities[e].pos = new_pos;
 				}
 			}
 		}
+
+		app->camera_pos = app->entities[E_PLAYER_INDEX].pos;
 		
 
 		//:RENDER
 
+		draw_frame.view = m4_translate(m4_scalar(1.0f), v3(app->camera_pos.x, app->camera_pos.y, 0));
+
 		//:RENDERING TILEMAP
 
 			
-		Int2 camera_tile_pos = {
-			.x = (s32)((app->camera_pos.x/tiles_screen_size.x)+ WORLD_X_LENGTH/2),
-			.y = (s32)((app->camera_pos.y/tiles_screen_size.y)+ WORLD_Y_LENGTH/2)
-		};
+		Int2 camera_tile_pos = world_pos_to_tile_pos(app->camera_pos, tiles_px_size);
 
 		Int2 render_rect_size = {42,26};
 
@@ -625,10 +669,10 @@ int entry(int argc, char **argv)
 		
 		for(int y=render_rect_min.y; y < render_rect_max.y; y++)
 		{
-			f32 y_final_pos = ((f32)(y - WORLD_Y_LENGTH/2)*tiles_screen_size.y);
+			f32 y_final_pos = ((f32)(y - WORLD_Y_LENGTH/2)*tiles_px_size.y);
 			for(int x = render_rect_min.x; x < render_rect_max.x; x++)
 			{
-				f32 x_final_pos = ((f32)(x - WORLD_X_LENGTH/2)*tiles_screen_size.x);
+				f32 x_final_pos = ((f32)(x - WORLD_X_LENGTH/2)*tiles_px_size.x);
 				{
 					if(app->world[y][x])
 					{
@@ -636,7 +680,7 @@ int entry(int argc, char **argv)
 						if(x==cursor_tile_pos.x && y==cursor_tile_pos.y){
 							tile_color = v4(1,1,0,1);
 						}
-						draw_image(textures[TEX_STONE], v2(x_final_pos, y_final_pos), tiles_screen_size, tile_color);
+						draw_image(textures[TEX_STONE], v2(x_final_pos, y_final_pos), tiles_px_size, tile_color);
 					}
 				}
 			}
@@ -656,10 +700,7 @@ int entry(int argc, char **argv)
 					tex_uid = app->item_id_to_tex_uid[app->items[app->entities[e].item].item_id];
 				}
 				
-				V2 image_screen_size = {
-					.x = 2.0f*virtual_aspect_ratio*(f32)textures[tex_uid]->width / virtual_screen_size.x, 
-					.y = 2.0f*textures[tex_uid]->height / virtual_screen_size.y
-				};
+				V2 image_screen_size = {(f32)textures[tex_uid]->width, (f32)textures[tex_uid]->height};
 				
 				if(app->entities[e].flags & E_PICKUP)
 				{
@@ -669,19 +710,17 @@ int entry(int argc, char **argv)
 					.x = app->entities[e].pos.x - image_screen_size.x/2,
 					.y = app->entities[e].pos.y - image_screen_size.y/2
 				};
-				draw_image(textures[TEX_PLAYER], image_pos, image_screen_size, v4(1,1,1,1) );
+				draw_image(textures[tex_uid], image_pos, image_screen_size, v4(1,1,1,1) );
 			}
 		}
 
 		//:RENDERING UI
 
-		
+		draw_frame.view = m4_scalar(1.0f);
       UNTIL(i, app->ui.current_widget_uid)
       {
-			V2 widget_pos = {app->ui.global_positions[i].x, app->ui.global_positions[i].y};
-			V2 widget_scale = {app->ui.widgets[i].style.size.x, app->ui.widgets[i].style.size.y};
          if(app->ui.widgets[i].flags != UI_SKIP_RENDERING)
-         {  
+         {
             
             Color temp_color = app->ui.widgets[i].style.color_rect;
             if(app->ui.selection.pressed == i){
@@ -689,8 +728,14 @@ int entry(int argc, char **argv)
             }else if(app->ui.selection.hot == i){
                temp_color = (Color){1,0,1, temp_color.a};
             }
-				draw_image(textures[app->ui.widgets[i].style.tex_uid], widget_pos, widget_scale, temp_color);
+				draw_image(textures[app->ui.widgets[i].style.tex_uid], 
+					app->ui.global_positions[i], 
+					app->ui.widgets[i].style.size, 
+					temp_color
+				);
          }
+
+			//:RENDERING UI TEXT
          //TODO: extract this to instancing once i solve the zpos thing
          if(app->ui.widgets[i].style.text.count && app->ui.widgets[i].style.text.data)
          {
@@ -703,7 +748,11 @@ int entry(int argc, char **argv)
                
                // Tex_info* texinfo;
                // LIST_GET(memory->tex_infos, request->object3d.texinfo_uid, texinfo);
-					draw_text(default_font, app->ui.widgets[i].style.text, 20, widget_pos, widget_scale, v4(1,1,1,1));
+					draw_text(default_font, app->ui.widgets[i].style.text, 20, 
+						app->ui.global_positions[i], 
+						(V2){0.5f, 0.5f},
+						v4(1,1,1,1)
+					);
             }
          }
       }
@@ -717,7 +766,7 @@ int entry(int argc, char **argv)
 		f32 dt = now - last_time;
 		os_high_precision_sleep((target_dt - dt) * 1000.0);
 		if ((int)now != (int)last_time) log("%.2f FPS\n%.2fms", 1.0/(now-last_time), (now-last_time)*1000);
-		last_time = now;
+		last_time = os_get_current_time_in_seconds();
 	}
 
 	return 0;

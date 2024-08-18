@@ -3,3 +3,4 @@ how to maximize window
 is there a better aproach to memory arenas or do i just keep using virtualalloc()
 instancing?
 integer to string
+shader stuff!! 
