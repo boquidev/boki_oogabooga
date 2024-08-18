@@ -1,0 +1,80 @@
+gameplay
+	- highlight/preview tile when a placeable is going to be placed
+	- make wand's selected slot auto cycle when it's equipped
+	
+	- make everything cast-able as a spell (i swear i am not pushing off survival/crafting gameplay)
+		- if the selected spell is not a spell
+			- if inventory is editable(a wand) recursively begin casting everything inside of it
+			- if inventory is !editable(something like a placeable_object) cast just the last spell
+			
+	- change perspective of the stone(i know i doesn't help gameplay but it will help me visuallize some stuff)
+	
+	- add modifier spells, which add properties to the next non-modifier spell casted
+	- make spells
+		- shoot a projectile
+			- make some kind of projectile entity
+			- and make some entity to test the projectile on
+			
+		// both of these could be the same 
+		// but then i would have to introduce some kind of health to each tile
+		- modifier destroys tiles // replace current destroy spell with this
+		- add damage
+		- teleport caster
+		
+	// finally start making some survival/crafty stuff
+	
+	// i was originally thinking this was going to have combat so i needed to make an enemy
+	// but CAN I focus the gameplay entirely on experimenting/researching with new spells 
+	// and exploring the map, and make it fun without combat???
+
+	// to do that i need to at least think about some interesting spells that don't revolve around combat
+	// and that are worth putting time to get them
+	// remember that 'no combat' doesn't mean 'no threats/enemies'
+	// spell ideas:
+		// invisibility
+		// light
+		// add impulse/dash
+		// 
+
+	
+	- add a crafting system
+		- i am thinking of an in-world crafting system
+		where i put items in some tiles/structure (and then throw a spell at it or something?)
+		at least for crafting wands that'd be cool, not  sure if that'd work for everything
+		
+		- maybe there are transmutation spells and each spell turns certain items into other stuff
+		or mixes items that can be mixed together
+			- examples: melt turns ores into ingots
+			- "tables" that can hold a spell and cast that spell on the items
+			
+	// how do i get spells
+		// IDEA1
+			// enemies hold wands and spells and when i kill them they drop em
+			// can research spells i encounter that i didn't have before
+			// and once i have researched a spell i can craft it
+			// the main crafting material will be a juice(?) that i get by recycling spells and wands
+		// IDEA2
+			// spells have a "secret" craftin recipe that i need to research in some way to learn how to craft it
+			// but how is that research process
+				
+	
+	// farming side/resource collection stuff
+		// if i don't include some sort of farming, crafting resources will probably be finite
+			// maybe that's not a problem for the kind of gameplay that this "thing" will have but we'll see
+			// or maybe i make the world automatically repopulate materials overtime 
+			// instead of the player having to have dedicated farms for materials
+			
+	
+
+	- make more spells (a lot later)
+		- fire property
+		- ice property
+		// i need a light system first
+		- gives light 
+			
+			
+low priority
+	- current ui system is kinda sus but i am liking it better than the last one i made
+		- but i am not liking having to do_widget() with everything even if that part of the ui is disabled 
+		just to preserve consistent uid's between frames no matter what.
+			- test out mixing some retained stuff next time (mayhaps?)

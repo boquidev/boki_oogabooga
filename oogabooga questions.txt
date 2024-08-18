@@ -1,6 +1,6 @@
 why build.bat erases build
 how to maximize window
 is there a better aproach to memory arenas or do i just keep using virtualalloc()
-instancing?
+instancing (i saw it in the todo so i assume it is pending?)
 integer to string
 shader stuff!! 
