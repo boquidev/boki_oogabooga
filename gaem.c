@@ -538,10 +538,8 @@ int entry(int argc, char **argv)
 							{
 								//TODO: placeable objects will have their own tile_uid
 								app->world[placing_tilemap_pos.y][placing_tilemap_pos.x] = 1;
-								//WHAT IN THE ACTUAL FUCK
 								app->items[equipped_item].item_count -= 1;
-								
-								assert(app->items[equipped_item].item_count >= 0);
+
 								if(app->items[equipped_item].item_count == 0)
 								{
 									app->used_items[equipped_item] = 0;
@@ -667,25 +665,32 @@ int entry(int argc, char **argv)
 		render_rect_max.x = clamp(camera_tile_pos.x + render_rect_size.x/2, render_rect_size.x, WORLD_X_LENGTH);
 		render_rect_max.y = clamp(camera_tile_pos.y + render_rect_size.y/2, render_rect_size.y, WORLD_Y_LENGTH);
 		
-		for(int y=render_rect_min.y; y < render_rect_max.y; y++)
 		{
-			f32 y_final_pos = ((f32)(y - WORLD_Y_LENGTH/2)*tiles_px_size.y);
-			for(int x = render_rect_min.x; x < render_rect_max.x; x++)
+			V2 placing_world_pos = v2_add(app->entities[E_PLAYER_INDEX].pos, v2_mulf(app->entities[E_PLAYER_INDEX].target_direction, DEFAULT_RANGE));
+			Int2 placing_tile_pos = world_pos_to_tile_pos(placing_world_pos, tiles_px_size);
+			b8 is_holding_placeable = app->items[app->entities[E_PLAYER_INDEX].inventory.items[app->entities[E_PLAYER_INDEX].inventory.selected_slot]].item_id == ITEM_STONE;
+
+			for(int y=render_rect_min.y; y < render_rect_max.y; y++)
 			{
-				f32 x_final_pos = ((f32)(x - WORLD_X_LENGTH/2)*tiles_px_size.x);
+				f32 y_final_pos = ((f32)(y - WORLD_Y_LENGTH/2)*tiles_px_size.y);
+				for(int x = render_rect_min.x; x < render_rect_max.x; x++)
 				{
-					if(app->world[y][x])
+					f32 x_final_pos = ((f32)(x - WORLD_X_LENGTH/2)*tiles_px_size.x);
 					{
-						Color tile_color = {1,1,1,1};
-						if(x==cursor_tile_pos.x && y==cursor_tile_pos.y){
-							tile_color = v4(1,1,0,1);
+						if(app->world[y][x] || (is_holding_placeable && x==placing_tile_pos.x && y==placing_tile_pos.y))
+						{
+							
+							Color tile_color = {1,1,1,1};
+							// if(x==cursor_tile_pos.x && y==cursor_tile_pos.y){
+							if(x==placing_tile_pos.x && y==placing_tile_pos.y){
+								tile_color = v4(1,1,0,1);
+							}
+							draw_image(textures[TEX_STONE], v2(x_final_pos, y_final_pos), tiles_px_size, tile_color);
 						}
-						draw_image(textures[TEX_STONE], v2(x_final_pos, y_final_pos), tiles_px_size, tile_color);
 					}
 				}
 			}
 		}
-
 
 		//:RENDERING ENTITIES
 		
