@@ -155,6 +155,7 @@ int entry(int argc, char **argv)
 			{
 				app->items[id].item_id = (Item_id)id;
 				app->used_items[id] = true;
+				app->items[id].casting_cd = .5f;
 				if(id)
 					app->items[id].item_count = 1;
 
@@ -482,17 +483,14 @@ int entry(int argc, char **argv)
 			app->entities[E_PLAYER_INDEX].target_direction = v2_normalize(v2_sub(cursor_world_pos, app->entities[E_PLAYER_INDEX].pos));
 			if(!is_mouse_in_ui)
 			{
-				if(is_key_down(MOUSE_BUTTON_LEFT) || is_key_down(MOUSE_BUTTON_RIGHT))
+				if(is_key_down(MOUSE_BUTTON_LEFT))
 				{
-					app->entities[E_PLAYER_INDEX].is_casting = true;
-					if(is_key_just_pressed(MOUSE_BUTTON_LEFT) && app->items[equipped_item].already_casted)
-					{
-						app->items[equipped_item].inventory.selected_slot = (app->items[equipped_item].inventory.selected_slot+1)%app->items[equipped_item].inventory.size;
-					}
-					if(is_key_down(MOUSE_BUTTON_RIGHT))
-					{
-						app->items[equipped_item].inventory.selected_slot = app->items[equipped_item].inventory.size - 1;
-					}
+					app->entities[E_PLAYER_INDEX].casting_state = CASTING_CYCLING;
+				}
+				if(is_key_down(MOUSE_BUTTON_RIGHT))
+				{
+					app->entities[E_PLAYER_INDEX].casting_state = CASTING_NO_CYCLING;
+					app->items[equipped_item].inventory.selected_slot = app->items[equipped_item].inventory.size - 1;
 				}
 
 				if(is_key_just_pressed(KEY_F1) == 1)
@@ -536,25 +534,37 @@ int entry(int argc, char **argv)
 				//TODO: this will be moving across the spells inventory
 				u16 equipped_item = get_entity_equipped_item_index(app, e);
 				if(app->items[equipped_item].inventory.size > 2 
-				|| (app->items[equipped_item].already_casted))
+				|| (app->entities[e].already_casted))
 				{
-					app->items[equipped_item].casting_time += fixed_dt;
-				}
-
-				if(app->items[equipped_item].casting_time > app->items[equipped_item].casting_cd)
-				{
-					app->items[equipped_item].casting_time = 0;
-					if(app->items[equipped_item].inventory.size > 2 
-					|| (app->items[equipped_item].inventory.selected_slot != 0 && app->items[equipped_item].already_casted && !app->entities[e].is_casting))
+					app->entities[e].casting_cd -= fixed_dt;
+					
+					if(app->entities[e].casting_cd <= 0)
 					{
-						app->items[equipped_item].inventory.selected_slot = (app->items[equipped_item].inventory.selected_slot+1)%app->items[equipped_item].inventory.size;
+						app->entities[e].casting_cd = app->items[equipped_item].casting_cd;
+						if(app->items[equipped_item].inventory.size > 2)
+						{
+							if(app->entities[e].casting_state != CASTING_NO_CYCLING)
+							{
+								app->items[equipped_item].inventory.selected_slot = (app->items[equipped_item].inventory.selected_slot+1)%app->items[equipped_item].inventory.size;
+							}
+						}
+						else
+						{
+							if(app->entities[e].casting_state != CASTING_NO_CYCLING)
+							{
+								app->items[equipped_item].inventory.selected_slot = 0;
+							}
+						}
+
+						app->entities[e].already_casted = false;
 					}
-					app->items[equipped_item].already_casted = false;
 				}
 
-				if(app->entities[e].is_casting && !app->items[equipped_item].already_casted)
+				if(app->entities[e].casting_state != CASTING_NULL 
+				&& !app->entities[e].already_casted)
 				{
-					app->items[equipped_item].already_casted = true;
+					app->entities[e].already_casted = true;
+					app->entities[e].casting_cd = app->items[equipped_item].casting_cd;
 
 					Item_id spell = app->items[app->items[equipped_item].inventory.items[app->items[equipped_item].inventory.selected_slot]].item_id;
 					switch(spell)
@@ -601,7 +611,7 @@ int entry(int argc, char **argv)
 						break;
 					}
 				}
-				app->entities[e].is_casting = false;
+				app->entities[e].casting_state = CASTING_NULL;
 				
 				UNTIL(e2, MAX_ENTITIES)
 				{

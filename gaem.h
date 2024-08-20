@@ -105,9 +105,7 @@ typedef struct Item
 	u16 item_count;
 	Item_id item_id;
 
-	b8 already_casted;
 	f32 casting_cd;
-	f32 casting_time;
 
 	Inventory inventory;
 }Item;
@@ -118,6 +116,13 @@ enum Entity_flag : u64
 	E_PICKUP = 0b10,
    E_LAST_FLAG = 0b100,
 };
+
+typedef enum Casting_type : u8
+{
+	CASTING_NULL,
+	CASTING_CYCLING,
+	CASTING_NO_CYCLING,
+}Casting_type;
 
 typedef struct Entity
 {
@@ -131,7 +136,10 @@ typedef struct Entity
    f32 movement_speed;
 	V2 target_direction;
 
-	b8 is_casting;
+	f32 casting_cd;
+	b8 stop_cycling;
+	b8 already_casted;
+	Casting_type casting_state;
 	
 	Inventory inventory;
 	u16 unarmed_inventory;
