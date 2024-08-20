@@ -175,11 +175,16 @@ int entry(int argc, char **argv)
 					case ITEM_SPELL_NULL: 
 					case ITEM_SPELL_PLACE_ITEM:
 					case ITEM_SPELL_DESTROY: 
+					{
+						// this is to make them not stackable
+						app->items[id].inventory.is_editable = true;
+					}
 					break;
 					case ITEM_WAND: 
 					{
 						app->items[id].inventory.is_editable = true;
 						app->items[id].inventory.size = 5;
+						app->items[id].casting_cd = .5f;
 						// TODO: this should be a dynamic inventory
 						// app->items[id].inventory.is_editable = true;
 					}
@@ -200,6 +205,8 @@ int entry(int argc, char **argv)
 			app->items[app->entities[E_PLAYER_INDEX].unarmed_inventory].inventory.size = 2;
 			app->items[app->entities[E_PLAYER_INDEX].unarmed_inventory].inventory.items[0] = ITEM_SPELL_DESTROY;
 			app->items[app->entities[E_PLAYER_INDEX].unarmed_inventory].inventory.items[1] = 0;
+			app->items[app->entities[E_PLAYER_INDEX].unarmed_inventory].casting_cd = .5f;
+
 		}
 		if(is_key_just_pressed('T'))
 		{
@@ -470,16 +477,18 @@ int entry(int argc, char **argv)
 
 		
 		{
-			//TODO: this will be moving across the spells inventory
 			u16 equipped_item = get_entity_equipped_item_index(app, E_PLAYER_INDEX);
-			app->items[equipped_item].inventory.selected_slot = 0;
 
 			app->entities[E_PLAYER_INDEX].target_direction = v2_normalize(v2_sub(cursor_world_pos, app->entities[E_PLAYER_INDEX].pos));
 			if(!is_mouse_in_ui)
 			{
 				if(is_key_down(MOUSE_BUTTON_LEFT) || is_key_down(MOUSE_BUTTON_RIGHT))
 				{
-						app->entities[E_PLAYER_INDEX].is_casting = true;
+					app->entities[E_PLAYER_INDEX].is_casting = true;
+					if(is_key_just_pressed(MOUSE_BUTTON_LEFT) && app->items[equipped_item].already_casted)
+					{
+						app->items[equipped_item].inventory.selected_slot = (app->items[equipped_item].inventory.selected_slot+1)%app->items[equipped_item].inventory.size;
+					}
 					if(is_key_down(MOUSE_BUTTON_RIGHT))
 					{
 						app->items[equipped_item].inventory.selected_slot = app->items[equipped_item].inventory.size - 1;
@@ -495,6 +504,16 @@ int entry(int argc, char **argv)
 					app->items[debug_wand_item_uid] = app->items[ITEM_WAND];
 
 					app->entities[debug_wand_pickup_uid].pos = cursor_world_pos;
+				}
+				if(is_key_just_pressed(KEY_F2) == 1)
+				{
+					u16 debug_spell = get_first_available_index(app->used_entities, MAX_ENTITIES);
+					app->entities[debug_spell].flags = E_RENDER|E_PICKUP;
+					u16 debug_wand_item_uid = get_first_available_index(app->used_items, MAX_ITEMS);
+					app->entities[debug_spell].item = debug_wand_item_uid;
+					app->items[debug_wand_item_uid] = app->items[ITEM_SPELL_DESTROY];
+
+					app->entities[debug_spell].pos = cursor_world_pos;
 				}
 			}
 		}
@@ -514,15 +533,28 @@ int entry(int argc, char **argv)
 			// f32 x_factor = 160.0f/90;e2_normalize(cursor_world_pos - app->entities[E_PLAYER_INDEX].pos.v2);
 			if(app->used_entities[e])
 			{
-				app->entities[e].casting_cooldown -= fixed_dt;
-				if(app->entities[e].is_casting && app->entities[e].casting_cooldown <= 0)
+				//TODO: this will be moving across the spells inventory
+				u16 equipped_item = get_entity_equipped_item_index(app, e);
+				if(app->items[equipped_item].inventory.size > 2 
+				|| (app->items[equipped_item].already_casted))
 				{
-					app->entities[e].casting_cooldown = 0.5f;
-					
-					u16 equipped_item = app->entities[e].inventory.items[app->entities[e].inventory.selected_slot];
-					if(!equipped_item){
-						equipped_item = app->entities[e].unarmed_inventory;
+					app->items[equipped_item].casting_time += fixed_dt;
+				}
+
+				if(app->items[equipped_item].casting_time > app->items[equipped_item].casting_cd)
+				{
+					app->items[equipped_item].casting_time = 0;
+					if(app->items[equipped_item].inventory.size > 2 
+					|| (app->items[equipped_item].inventory.selected_slot != 0 && app->items[equipped_item].already_casted && !app->entities[e].is_casting))
+					{
+						app->items[equipped_item].inventory.selected_slot = (app->items[equipped_item].inventory.selected_slot+1)%app->items[equipped_item].inventory.size;
 					}
+					app->items[equipped_item].already_casted = false;
+				}
+
+				if(app->entities[e].is_casting && !app->items[equipped_item].already_casted)
+				{
+					app->items[equipped_item].already_casted = true;
 
 					Item_id spell = app->items[app->items[equipped_item].inventory.items[app->items[equipped_item].inventory.selected_slot]].item_id;
 					switch(spell)

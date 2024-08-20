@@ -105,6 +105,10 @@ typedef struct Item
 	u16 item_count;
 	Item_id item_id;
 
+	b8 already_casted;
+	f32 casting_cd;
+	f32 casting_time;
+
 	Inventory inventory;
 }Item;
 
@@ -127,7 +131,6 @@ typedef struct Entity
    f32 movement_speed;
 	V2 target_direction;
 
-	f32 casting_cooldown;
 	b8 is_casting;
 	
 	Inventory inventory;

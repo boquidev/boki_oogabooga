@@ -1,6 +1,7 @@
 gameplay
 	// - highlight/preview tile when a placeable is going to be placed
-	// i didn't like how it feels to place blocks now
+	// i don't like how it feels to place blocks now
+	
 	- make wand's selected slot auto cycle when it's equipped
 	
 	- make everything cast-able as a spell (i swear i am not pushing off survival/crafting gameplay)
@@ -27,7 +28,7 @@ gameplay
 	// i was originally thinking this was going to have combat so i needed to make an enemy
 	// but CAN I focus the gameplay entirely on experimenting/researching with new spells 
 	// and exploring the map, and make it fun without combat???
-
+	
 	// to do that i need to at least think about some interesting spells that don't revolve around combat
 	// and that are worth putting time to get them
 	// remember that 'no combat' doesn't mean 'no threats/enemies'
@@ -36,6 +37,8 @@ gameplay
 		// light
 		// add impulse/dash
 		// 
+
+	// I will just do my original idea, playtest and check what part of the game people likes the most
 
 	
 	- add a crafting system
