@@ -430,6 +430,7 @@ int entry(int argc, char **argv)
 			
 
 			//:CURSOR ITEM SLOT
+			test_style = STYLE_NULL;
 			u32 flag = 0;
 			if(!(app->is_menu_opened && app->cursor_item))
 			{
@@ -439,7 +440,7 @@ int entry(int argc, char **argv)
 			test_style.color_rect = (Color){.99f,.99f,.99f,1};
 			test_style.size = (V2){slots_size, slots_size};
 			test_style.pos = v2_sub(cursor_screen_pos, v2(.75f*test_style.size.x, .25f*test_style.size.y));
-			if(app->items[app->cursor_item].item_count > 1)
+			if(app->cursor_item != NULL_INDEX16 && app->items[app->cursor_item].item_count > 1)
 			{
 				test_style.text = u32_to_string(app->items[app->cursor_item].item_count, &temp_arena);
 			}
@@ -547,6 +548,12 @@ int entry(int argc, char **argv)
 				//TODO: this will be moving across the spells inventory
 				u16 equipped_item = get_entity_equipped_item_index(app, e);
 				u16 casting_item = equipped_item;
+				u16* casting_item_parent_inventory_slot;
+				if(equipped_item != app->entities[e].unarmed_inventory){
+					casting_item_parent_inventory_slot = &app->entities[e].inventory.items[app->entities[e].inventory.selected_slot];
+				}else{
+					casting_item_parent_inventory_slot = &app->items[equipped_item].inventory.items[app->items[equipped_item].inventory.selected_slot];
+				}
 
 				u16 casting_stack [MAX_CASTING_RECURSION] = {0};
 				casting_stack[0] = casting_item;
@@ -557,16 +564,10 @@ int entry(int argc, char **argv)
 				{
 					casting_item = casting_spell;
 					casting_spell = app->items[casting_item].inventory.items[app->items[casting_item].inventory.selected_slot];
+					casting_item_parent_inventory_slot = &app->items[casting_item].inventory.items[app->items[casting_item].inventory.selected_slot];
 					
 					current_recursion++;
 					casting_stack[current_recursion] = casting_item;
-				}
-
-				u16 casting_item_owner = NULL_INDEX16;
-				if(casting_item != equipped_item)
-				{
-					assert(current_recursion > 0);
-					casting_item_owner = casting_stack[current_recursion-1];
 				}
 
 
@@ -586,13 +587,13 @@ int entry(int argc, char **argv)
 						{
 							//TODO: placeable objects will have their own tile_uid
 							app->world[placing_tilemap_pos.y][placing_tilemap_pos.x] = 1;
-							app->items[casting_item_owner].item_count -= 1;
+							app->items[casting_item].item_count -= 1;
 
-							if(app->items[casting_item_owner].item_count == 0)
+							if(app->items[casting_item].item_count == 0)
 							{
-								app->used_items[casting_item_owner] = 0;
-								ZERO_STRUCT(app->items[casting_item_owner]);
-								// app->entities[e].inventory.items[app->entities[e].inventory.selected_slot] = 0;
+								app->used_items[casting_item] = 0;
+								ZERO_STRUCT(app->items[casting_item]);
+								*casting_item_parent_inventory_slot = 0;
 							}
 						}
 					}

@@ -1,6 +1,17 @@
-gameplay
+
+low priority
+	- current ui system is kinda sus but i am liking it better than the last one i made
+		- but i am not liking having to do_widget() with everything even if that part of the ui is disabled 
+		just to preserve consistent uid's between frames no matter what.
+			- test out mixing some retained stuff next time (mayhaps?)
+
+	- instead of having the inventory inside the entity struct, change it to be an uid to an item and use that item's inventory as the entity inventory
+	just because it makes the recursion easier in some parts
+			
+main
 	// - highlight/preview tile when a placeable is going to be placed
 	// i don't like how it feels to place blocks now
+
 	
 	- reset object inventory.selected when swapping
 	- check unarmed inventory for stacking when collecting an item
@@ -73,10 +84,3 @@ gameplay
 		- fire property
 		- ice property
 		- gives light // i need a light system first
-			
-			
-low priority
-	- current ui system is kinda sus but i am liking it better than the last one i made
-		- but i am not liking having to do_widget() with everything even if that part of the ui is disabled 
-		just to preserve consistent uid's between frames no matter what.
-			- test out mixing some retained stuff next time (mayhaps?)
