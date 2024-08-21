@@ -222,6 +222,8 @@ int entry(int argc, char **argv)
 			}
 		}
 		
+		#define INVENTORY_ROWS_LENGTH 20
+		
 		if(delta_wheel)
 		{
 			u16 current_item = app->entities[E_PLAYER_INDEX].inventory.items[app->entities[E_PLAYER_INDEX].inventory.selected_slot];
@@ -232,7 +234,7 @@ int entry(int argc, char **argv)
 				app->items[current_item].inventory.selected_slot = 0;
 				current_item = next_item;
 			}
-   		app->entities[E_PLAYER_INDEX].inventory.selected_slot = (app->entities[E_PLAYER_INDEX].inventory.selected_slot+10-delta_wheel)%10;
+   		app->entities[E_PLAYER_INDEX].inventory.selected_slot = (app->entities[E_PLAYER_INDEX].inventory.selected_slot+INVENTORY_ROWS_LENGTH-delta_wheel)%INVENTORY_ROWS_LENGTH;
 			app->entities[E_PLAYER_INDEX].casting_cd = item_cd;
 
 			current_item = app->entities[E_PLAYER_INDEX].inventory.items[app->entities[E_PLAYER_INDEX].inventory.selected_slot];
@@ -245,10 +247,11 @@ int entry(int argc, char **argv)
 		}
 
 		
-		if(is_key_just_pressed(KEY_TAB))
-		{
-			app->is_menu_opened = !app->is_menu_opened;
-		}
+		// if(is_key_just_pressed(KEY_TAB))
+		// {
+		// 	app->is_menu_opened = !app->is_menu_opened;
+		// }
+		app->is_menu_opened = true;
 
 		V2 input_direction = {
 			(f32)((is_key_down('D') > 0) - (is_key_down('A') > 0)),
@@ -262,8 +265,6 @@ int entry(int argc, char **argv)
 		app->ui.current_widget_uid = 0;
 		app->ui.selection.hot = NULL_INDEX16;
 		
-
-		#define INVENTORY_ROWS_LENGTH 10
 
 		UNTIL(i, MAX_UI_WIDGETS)
 		{
@@ -310,11 +311,11 @@ int entry(int argc, char **argv)
 		ui_push(&app->ui, do_widget(&app->ui, UI_SKIP_RENDERING, STYLE_NULL));
 		{
 			u32 rows = 1;
-			u32 visible_slots_count = 10;
+			u32 visible_slots_count = INVENTORY_ROWS_LENGTH;
 
 			if(app->is_menu_opened)
 			{
-				rows = (INVENTORY_SIZE+10-1)/10;
+				rows = (INVENTORY_SIZE+INVENTORY_ROWS_LENGTH-1)/INVENTORY_ROWS_LENGTH;
 				visible_slots_count = INVENTORY_SIZE;
 			}
 
@@ -324,7 +325,7 @@ int entry(int argc, char **argv)
 			test_style.layout = UI_LAYOUT_GRID_ROW_MAJOR;
 			test_style.line_size = INVENTORY_ROWS_LENGTH;
 			test_style.cells_border_size = 1.0f;
-			test_style.size = (V2){slots_size*10, slots_size*rows};
+			test_style.size = (V2){slots_size*INVENTORY_ROWS_LENGTH, slots_size*rows};
 			test_style.pos = (V2){-test_style.size.x/2, (virtual_screen_size.y/2)-1 - slots_size*rows};
 			test_style.color_rect = (Color){.8f,.8f,.8f,1};
 			ui_push(&app->ui, do_widget(&app->ui, 0, test_style));
@@ -703,7 +704,7 @@ int entry(int argc, char **argv)
 								u16 first_empty_slot = NULL_INDEX16;
 								u16* already_found_stack_item = 0;
 								u16 total_count = 0;
-								UNTIL(slot, INVENTORY_SIZE)
+								for(u16 slot = INVENTORY_SIZE-1; slot < INVENTORY_SIZE; slot--)
 								{
 									u16 e2_item_uid = app->entities[e2].inventory.items[slot];
 

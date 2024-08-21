@@ -12,8 +12,6 @@ main
 	// - highlight/preview tile when a placeable is going to be placed
 	// i don't like how it feels to place blocks now
 
-	
-	- fill hotbar from the last slot to the first
 	- stack items with the mouse
 	- if right click while holding a stackable item, place 1 unit of that item
 			
