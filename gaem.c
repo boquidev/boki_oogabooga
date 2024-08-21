@@ -221,8 +221,28 @@ int entry(int argc, char **argv)
 				delta_wheel = input_frame.events[i].yscroll;
 			}
 		}
+		
+		if(delta_wheel)
+		{
+			u16 current_item = app->entities[E_PLAYER_INDEX].inventory.items[app->entities[E_PLAYER_INDEX].inventory.selected_slot];
+			f32 item_cd = app->items[current_item].casting_cd;
+			while(app->items[current_item].inventory.size)
+			{
+				u16 next_item = app->items[current_item].inventory.items[app->items[current_item].inventory.selected_slot];
+				app->items[current_item].inventory.selected_slot = 0;
+				current_item = next_item;
+			}
+   		app->entities[E_PLAYER_INDEX].inventory.selected_slot = (app->entities[E_PLAYER_INDEX].inventory.selected_slot+10-delta_wheel)%10;
+			app->entities[E_PLAYER_INDEX].casting_cd = item_cd;
 
-   	app->entities[E_PLAYER_INDEX].inventory.selected_slot = (app->entities[E_PLAYER_INDEX].inventory.selected_slot+10-delta_wheel)%10;
+			current_item = app->entities[E_PLAYER_INDEX].inventory.items[app->entities[E_PLAYER_INDEX].inventory.selected_slot];
+			while(app->items[current_item].inventory.size)
+			{
+				u16 next_item = app->items[current_item].inventory.items[app->items[current_item].inventory.selected_slot];
+				app->items[current_item].inventory.selected_slot = 0;
+				current_item = next_item;
+			}
+		}
 
 		
 		if(is_key_just_pressed(KEY_TAB))
@@ -642,7 +662,11 @@ int entry(int argc, char **argv)
 							if(app->items[casting_item].inventory.size != 0 && !app->items[casting_item].not_cycle_when_casting)
 							{
 								app->items[casting_item].inventory.selected_slot = (app->items[casting_item].inventory.selected_slot+1)%app->items[casting_item].inventory.size;
+								u16 new_selected_slot = app->items[casting_item].inventory.selected_slot;
+								app->items[app->items[casting_item].inventory.items[new_selected_slot]].inventory.selected_slot = 0;
 							}
+
+							//:UPDATING SELECTED SLOT
 							while(app->items[casting_item].inventory.selected_slot == 0 && casting_item != equipped_item)
 							{
 								assert(current_recursion > 0);
@@ -651,6 +675,7 @@ int entry(int argc, char **argv)
 								if(app->items[casting_item].inventory.size != 0 && !app->items[casting_item].not_cycle_when_casting)
 								{
 									app->items[casting_item].inventory.selected_slot = (app->items[casting_item].inventory.selected_slot+1)%app->items[casting_item].inventory.size;
+									app->items[app->items[casting_item].inventory.items[app->items[casting_item].inventory.selected_slot]].inventory.selected_slot = 0;
 								}
 							}
 						}

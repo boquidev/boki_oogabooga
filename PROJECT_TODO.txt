@@ -6,14 +6,13 @@ low priority
 			- test out mixing some retained stuff next time (mayhaps?)
 
 	- instead of having the inventory inside the entity struct, change it to be an uid to an item and use that item's inventory as the entity inventory
-	just because it makes the recursion easier in some parts
+	just because it makes the recursion easier in some parts, cuz right now i had to use a u16*
 			
 main
 	// - highlight/preview tile when a placeable is going to be placed
 	// i don't like how it feels to place blocks now
 
 	
-	- reset object inventory.selected when swapping
 	- check unarmed inventory for stacking when collecting an item
 	- fill hotbar from the last slot to the first
 	- stack items with the mouse
