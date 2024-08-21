@@ -87,10 +87,11 @@ typedef enum Item_id : u16
 {
 	ITEM_NULL,
 
+	ITEM_PLACEABLE_FIRST,
 	ITEM_STONE,
+	ITEM_PLACEABLE_LAST,
 
 	ITEM_SPELL_NULL,
-	ITEM_SPELL_PLACE_ITEM,
 	ITEM_SPELL_DESTROY,
 	ITEM_SPELL_LAST,
 
@@ -106,6 +107,7 @@ typedef struct Item
 	Item_id item_id;
 
 	f32 casting_cd;
+	b8 not_cycle_when_casting;
 
 	Inventory inventory;
 }Item;
@@ -447,4 +449,9 @@ u16 get_entity_equipped_item_index(App_data* app, u16 entity_index)
 	if(!result)
 		result = app->entities[entity_index].unarmed_inventory;
 	return result;
+}
+
+b8 is_placeable_item(Item_id item_id)
+{
+	return ITEM_PLACEABLE_FIRST < item_id && item_id < ITEM_PLACEABLE_LAST;
 }

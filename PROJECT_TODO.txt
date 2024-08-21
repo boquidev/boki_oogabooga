@@ -2,12 +2,11 @@ gameplay
 	// - highlight/preview tile when a placeable is going to be placed
 	// i don't like how it feels to place blocks now
 	
-	- make wand's selected slot auto cycle when it's equipped
-	
-	- make everything cast-able as a spell (i swear i am not pushing off survival/crafting gameplay)
-		- if the selected spell is not a spell
-			- if inventory is editable(a wand) recursively begin casting everything inside of it
-			- if inventory is !editable(something like a placeable_object) cast just the last spell
+	- reset object inventory.selected when swapping
+	- check unarmed inventory for stacking when collecting an item
+	- fill hotbar from the last slot to the first
+	- stack items with the mouse
+	- if right click while holding a stackable item, place 1 unit of that item
 			
 	- change perspective of the stone(i know i doesn't help gameplay but it will help me visuallize some stuff)
 	

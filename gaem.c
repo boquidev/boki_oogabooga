@@ -147,7 +147,6 @@ int entry(int argc, char **argv)
 			app->item_id_to_tex_uid[ITEM_STONE] = TEX_STONE;
 			app->item_id_to_tex_uid[ITEM_WAND] = TEX_WAND;
 			app->item_id_to_tex_uid[ITEM_SPELL_NULL] = TEX_SPELL_NULL;
-			app->item_id_to_tex_uid[ITEM_SPELL_PLACE_ITEM] = TEX_SPELL_PLACE_ITEM;
 			app->item_id_to_tex_uid[ITEM_SPELL_DESTROY] = TEX_SPELL_DESTROY_TILE;
 
 			//:INITIALIZE STATIC ITEMS
@@ -162,19 +161,17 @@ int entry(int argc, char **argv)
 				switch(id)
 				{
 					case ITEM_NULL:
+					case ITEM_PLACEABLE_FIRST:
+					case ITEM_PLACEABLE_LAST:
 					case ITEM_LAST_ID:
 					case ITEM_SPELL_LAST: 
 					break;
 					
 					case ITEM_STONE: 
 					{
-						app->items[id].inventory.size = 2;
-						app->items[id].inventory.items[0] = ITEM_SPELL_DESTROY;
-						app->items[id].inventory.items[1] = ITEM_SPELL_PLACE_ITEM;
 					}
 					break;
 					case ITEM_SPELL_NULL: 
-					case ITEM_SPELL_PLACE_ITEM:
 					case ITEM_SPELL_DESTROY: 
 					{
 						// this is to make them not stackable
@@ -202,11 +199,13 @@ int entry(int argc, char **argv)
 			app->entities[E_PLAYER_INDEX].pos = v2(0, 0);
 			app->entities[E_PLAYER_INDEX].flags = E_RENDER;
 			app->entities[E_PLAYER_INDEX].unarmed_inventory = get_first_available_index(app->used_items, MAX_ITEMS);
+			app->entities[E_PLAYER_INDEX].already_casted = true;
 			app->items[app->entities[E_PLAYER_INDEX].unarmed_inventory].inventory.is_editable = true;
 			app->items[app->entities[E_PLAYER_INDEX].unarmed_inventory].inventory.size = 2;
 			app->items[app->entities[E_PLAYER_INDEX].unarmed_inventory].inventory.items[0] = ITEM_SPELL_DESTROY;
 			app->items[app->entities[E_PLAYER_INDEX].unarmed_inventory].inventory.items[1] = 0;
 			app->items[app->entities[E_PLAYER_INDEX].unarmed_inventory].casting_cd = .5f;
+			app->items[app->entities[E_PLAYER_INDEX].unarmed_inventory].not_cycle_when_casting = true;
 
 		}
 		if(is_key_just_pressed('T'))
@@ -361,60 +360,74 @@ int entry(int argc, char **argv)
 
 
 			//:UI SPELLS INVENTORY
-			u16 equipped_item = app->entities[E_PLAYER_INDEX].inventory.items[app->entities[E_PLAYER_INDEX].inventory.selected_slot];
-			if(!equipped_item) {
-				equipped_item = app->entities[E_PLAYER_INDEX].unarmed_inventory;
-			}
-			
-			u32 spells_ui_flags = 0;
-			if(!app->items[equipped_item].inventory.size) 
-			{
-				spells_ui_flags = UI_SKIP_RENDERING;
-			}
+			u16 equipped_item = get_entity_equipped_item_index(app, E_PLAYER_INDEX);
+			u16 current_item = equipped_item;
 
-			test_style = STYLE_NULL;
-			test_style.layout = UI_LAYOUT_GRID_ROW_MAJOR;
-			test_style.line_size = INVENTORY_ROWS_LENGTH;
-			test_style.line_size = app->items[equipped_item].inventory.size;
-			test_style.cells_border_size = 1.0f;
-			test_style.size = (V2){slots_size*app->items[equipped_item].inventory.size, slots_size};
-			test_style.pos = (V2){(virtual_screen_size.x/2)-test_style.size.x - 1, -virtual_screen_size.y/2};
-			test_style.color_rect = (Color){.8f,.8f,.8f,1};
+			#define MAX_CASTING_RECURSION 1000
+			u16 casting_stack [MAX_CASTING_RECURSION] = {0};
+			casting_stack[0] = current_item;
+			u16 current_recursion = 0;
 
-			ui_push(&app->ui, do_widget(&app->ui, spells_ui_flags, test_style));
-			{
-				//TODO: instead of inventory.size use a constant value to keep uid's universal
-				UNTIL(spell, app->items[equipped_item].inventory.size)
+			f32 current_y_pos = -virtual_screen_size.y/2;
+			while(app->items[current_item].inventory.size > 0)
+			{	
+				u32 spells_ui_flags = 0;
+				if(!app->items[current_item].inventory.size) 
 				{
-					Ui_style temp_style = {0};
-					u16 spell_item_uid = app->items[equipped_item].inventory.items[spell];
-					temp_style.tex_uid = app->item_id_to_tex_uid[app->items[spell_item_uid].item_id];
-					temp_style.color_rect = (Color){.3f,.3f,.3f,1};
-					// if(app->items[app->items[equipped_item].inventory[spell]].item_count > 1)
-					// {
-					//    test_style.text = u32_to_string(app->items[equipped_item].inventory[spell].item_count, memory->temp_arena);
-					// }
-					if(app->items[equipped_item].inventory.selected_slot == spell)
+					spells_ui_flags = UI_SKIP_RENDERING;
+				}
+
+				test_style = STYLE_NULL;
+				test_style.layout = UI_LAYOUT_GRID_ROW_MAJOR;
+				test_style.line_size = INVENTORY_ROWS_LENGTH;
+				test_style.line_size = app->items[current_item].inventory.size;
+				test_style.cells_border_size = 1.0f;
+				test_style.size = (V2){slots_size*app->items[current_item].inventory.size, slots_size};
+				test_style.color_rect = (Color){.8f,.8f,.8f,1};
+				test_style.pos = (V2){(virtual_screen_size.x/2)-test_style.size.x - 1, current_y_pos};
+				
+
+				ui_push(&app->ui, do_widget(&app->ui, spells_ui_flags, test_style));
+				{
+					//TODO: instead of inventory.size use a constant value to keep uid's universal
+					UNTIL(spell, app->items[current_item].inventory.size)
 					{
-						temp_style.color_rect = (Color){1,1,1,1};
-					}
-					if(app->items[spell_item_uid].item_count > 1)
-					{
-						temp_style.text = u32_to_string(app->items[spell_item_uid].item_count, &temp_arena);
-					}
-					if(app->ui.selection.clicked == do_widget(&app->ui, UI_CLICKABLE, temp_style) && app->items[equipped_item].inventory.is_editable)
-					{
-						if(app->is_menu_opened)
+						Ui_style temp_style = {0};
+						u16 spell_item_uid = app->items[current_item].inventory.items[spell];
+						temp_style.tex_uid = app->item_id_to_tex_uid[app->items[spell_item_uid].item_id];
+						temp_style.color_rect = (Color){.3f,.3f,.3f,1};
+						// if(app->items[app->items[current_item].inventory[spell]].item_count > 1)
+						// {
+						//    test_style.text = u32_to_string(app->items[current_item].inventory[spell].item_count, memory->temp_arena);
+						// }
+						if(app->items[current_item].inventory.selected_slot == spell)
 						{
-							//TODO: clicking the slots while the menu is opened
-							u16 temp_item = app->cursor_item;
-							app->cursor_item = spell_item_uid;
-							app->items[equipped_item].inventory.items[spell] = temp_item;
+							temp_style.color_rect = (Color){1,1,1,1};
+						}
+						if(app->items[spell_item_uid].item_count > 1)
+						{
+							temp_style.text = u32_to_string(app->items[spell_item_uid].item_count, &temp_arena);
+						}
+						if(app->ui.selection.clicked == do_widget(&app->ui, UI_CLICKABLE, temp_style) && app->items[current_item].inventory.is_editable)
+						{
+							if(app->is_menu_opened && current_item == equipped_item)
+							{
+								//TODO: clicking the slots while the menu is opened
+								u16 temp_item = app->cursor_item;
+								app->cursor_item = spell_item_uid;
+								app->items[current_item].inventory.items[spell] = temp_item;
+							}
 						}
 					}
-				}
-			}ui_pop(&app->ui);
+				}ui_pop(&app->ui);
 
+				current_y_pos += test_style.size.y;
+				
+				current_item = app->items[current_item].inventory.items[app->items[current_item].inventory.selected_slot];
+				current_recursion++;
+				casting_stack[current_recursion] = current_item;
+			}
+			
 
 			//:CURSOR ITEM SLOT
 			u32 flag = 0;
@@ -533,82 +546,124 @@ int entry(int argc, char **argv)
 			{
 				//TODO: this will be moving across the spells inventory
 				u16 equipped_item = get_entity_equipped_item_index(app, e);
-				if(app->items[equipped_item].inventory.size > 2 
+				u16 casting_item = equipped_item;
+
+				u16 casting_stack [MAX_CASTING_RECURSION] = {0};
+				casting_stack[0] = casting_item;
+				u16 current_recursion = 0;
+				
+				u16 casting_spell = app->items[casting_item].inventory.items[app->items[casting_item].inventory.selected_slot];
+				while(app->items[casting_item].inventory.size > 0 && casting_spell)
+				{
+					casting_item = casting_spell;
+					casting_spell = app->items[casting_item].inventory.items[app->items[casting_item].inventory.selected_slot];
+					
+					current_recursion++;
+					casting_stack[current_recursion] = casting_item;
+				}
+
+				u16 casting_item_owner = NULL_INDEX16;
+				if(casting_item != equipped_item)
+				{
+					assert(current_recursion > 0);
+					casting_item_owner = casting_stack[current_recursion-1];
+				}
+
+
+				if(app->entities[e].casting_state != CASTING_NULL 
+				&& !app->entities[e].already_casted)
+				{
+					app->entities[e].already_casted = true;
+
+					// Item_id spell = app->items[app->items[casting_item].inventory.items[app->items[casting_item].inventory.selected_slot]].item_id;
+
+					if(is_placeable_item(app->items[casting_item].item_id))
+					{
+						V2 placing_world_pos = v2_add(app->entities[e].pos, v2_mulf(app->entities[e].target_direction, DEFAULT_RANGE));
+						Int2 placing_tilemap_pos = world_pos_to_tile_pos(placing_world_pos, tiles_px_size);
+
+						if(!app->world[placing_tilemap_pos.y][placing_tilemap_pos.x])
+						{
+							//TODO: placeable objects will have their own tile_uid
+							app->world[placing_tilemap_pos.y][placing_tilemap_pos.x] = 1;
+							app->items[casting_item_owner].item_count -= 1;
+
+							if(app->items[casting_item_owner].item_count == 0)
+							{
+								app->used_items[casting_item_owner] = 0;
+								ZERO_STRUCT(app->items[casting_item_owner]);
+								// app->entities[e].inventory.items[app->entities[e].inventory.selected_slot] = 0;
+							}
+						}
+					}
+					else
+					{
+						Item_id spell = app->items[casting_item].item_id;
+						switch(spell)
+						{
+							case ITEM_SPELL_NULL:
+							break;
+							case ITEM_SPELL_DESTROY:
+							{
+								//TODO: axis aligned 2d ray marching
+								V2 current_pos = app->entities[e].pos;
+								UNTIL(step, 10)
+								{
+									V2 test_world_pos = v2_add(current_pos , v2_mulf(app->entities[e].target_direction, (step*DEFAULT_RANGE/10)));
+									Int2 test_tilemap_pos = world_pos_to_tile_pos(test_world_pos, tiles_px_size);
+									if(app->world[test_tilemap_pos.y][test_tilemap_pos.x])
+									{
+										destroy_tile(app, test_tilemap_pos, tiles_px_size);
+										break;
+									}
+								}
+							}
+							break;
+							default:
+							break;
+						}
+					}
+				}
+
+				if(!app->items[casting_item].not_cycle_when_casting // do cycle when casting
 				|| (app->entities[e].already_casted))
 				{
 					app->entities[e].casting_cd -= fixed_dt;
 					
 					if(app->entities[e].casting_cd <= 0)
 					{
-						app->entities[e].casting_cd = app->items[equipped_item].casting_cd;
-						if(app->items[equipped_item].inventory.size > 2)
+						app->entities[e].casting_cd = app->items[casting_item].casting_cd;
+						// if(app->entities[e].casting_state != CASTING_NO_CYCLING && app->items[casting_item].inventory.size)
+						// {
+						// 	if(app->items[casting_item].not_cycle_when_casting)
+						// 	{
+						// 		app->items[casting_item].inventory.selected_slot = 0;
+						// 	}
+						// 	else
+						// 	{
+						// 		app->items[casting_item].inventory.selected_slot = (app->items[casting_item].inventory.selected_slot+1)%app->items[casting_item].inventory.size;
+						// 	}
+						// }
+
+						if(app->entities[e].casting_state != CASTING_NO_CYCLING)
 						{
-							if(app->entities[e].casting_state != CASTING_NO_CYCLING)
+							if(app->items[casting_item].inventory.size != 0 && !app->items[casting_item].not_cycle_when_casting)
 							{
-								app->items[equipped_item].inventory.selected_slot = (app->items[equipped_item].inventory.selected_slot+1)%app->items[equipped_item].inventory.size;
+								app->items[casting_item].inventory.selected_slot = (app->items[casting_item].inventory.selected_slot+1)%app->items[casting_item].inventory.size;
 							}
-						}
-						else
-						{
-							if(app->entities[e].casting_state != CASTING_NO_CYCLING)
+							while(app->items[casting_item].inventory.selected_slot == 0 && casting_item != equipped_item)
 							{
-								app->items[equipped_item].inventory.selected_slot = 0;
+								assert(current_recursion > 0);
+								current_recursion--;
+								casting_item = casting_stack[current_recursion];
+								if(app->items[casting_item].inventory.size != 0 && !app->items[casting_item].not_cycle_when_casting)
+								{
+									app->items[casting_item].inventory.selected_slot = (app->items[casting_item].inventory.selected_slot+1)%app->items[casting_item].inventory.size;
+								}
 							}
 						}
 
 						app->entities[e].already_casted = false;
-					}
-				}
-
-				if(app->entities[e].casting_state != CASTING_NULL 
-				&& !app->entities[e].already_casted)
-				{
-					app->entities[e].already_casted = true;
-					app->entities[e].casting_cd = app->items[equipped_item].casting_cd;
-
-					Item_id spell = app->items[app->items[equipped_item].inventory.items[app->items[equipped_item].inventory.selected_slot]].item_id;
-					switch(spell)
-					{
-						case ITEM_SPELL_NULL:
-						break;
-						case ITEM_SPELL_PLACE_ITEM:
-						{
-							V2 placing_world_pos = v2_add(app->entities[e].pos, v2_mulf(app->entities[e].target_direction, DEFAULT_RANGE));
-							Int2 placing_tilemap_pos = world_pos_to_tile_pos(placing_world_pos, tiles_px_size);
-
-							if(!app->world[placing_tilemap_pos.y][placing_tilemap_pos.x])
-							{
-								//TODO: placeable objects will have their own tile_uid
-								app->world[placing_tilemap_pos.y][placing_tilemap_pos.x] = 1;
-								app->items[equipped_item].item_count -= 1;
-
-								if(app->items[equipped_item].item_count == 0)
-								{
-									app->used_items[equipped_item] = 0;
-									ZERO_STRUCT(app->items[equipped_item]);
-									app->entities[e].inventory.items[app->entities[e].inventory.selected_slot] = 0;
-								}
-							}
-						}
-						break;
-						case ITEM_SPELL_DESTROY:
-						{
-							//TODO: axis aligned 2d ray marching
-							V2 current_pos = app->entities[e].pos;
-							UNTIL(step, 10)
-							{
-								V2 test_world_pos = v2_add(current_pos , v2_mulf(app->entities[e].target_direction, (step*DEFAULT_RANGE/10)));
-								Int2 test_tilemap_pos = world_pos_to_tile_pos(test_world_pos, tiles_px_size);
-								if(app->world[test_tilemap_pos.y][test_tilemap_pos.x])
-								{
-									destroy_tile(app, test_tilemap_pos, tiles_px_size);
-									break;
-								}
-							}
-						}
-						break;
-						default:
-						break;
 					}
 				}
 				app->entities[e].casting_state = CASTING_NULL;
