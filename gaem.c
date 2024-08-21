@@ -207,6 +207,16 @@ int entry(int argc, char **argv)
 			app->items[app->entities[E_PLAYER_INDEX].unarmed_inventory].casting_cd = .5f;
 			app->items[app->entities[E_PLAYER_INDEX].unarmed_inventory].not_cycle_when_casting = true;
 
+			UNTIL(slot, INVENTORY_SIZE)
+			{
+				if(!slot) continue;
+				u16 new_stone = get_first_available_index(app->used_items, MAX_ITEMS);
+				app->entities[E_PLAYER_INDEX].inventory.items[slot] = new_stone;
+				app->items[new_stone] = app->items[ITEM_STONE];
+				app->items[new_stone].item_count = 2;
+				
+			}
+
 		}
 		if(is_key_just_pressed('T'))
 		{
@@ -352,12 +362,32 @@ int entry(int argc, char **argv)
 					{
 						if(app->ui.selection.clicked == slot_uid)
 						{
+							u16 current_item = app->entities[E_PLAYER_INDEX].inventory.items[i];
 							if(app->is_menu_opened)
-							{
-								//TODO: clicking the slots while the menu is opened
-								u16 temp_item = app->cursor_item;
-								app->cursor_item = app->entities[E_PLAYER_INDEX].inventory.items[i];
-								app->entities[E_PLAYER_INDEX].inventory.items[i] = temp_item;
+							{								
+								if(app->items[app->cursor_item].item_id == app->items[current_item].item_id
+								&& !app->items[current_item].inventory.is_editable)
+								{
+									app->items[current_item].item_count += app->items[app->cursor_item].item_count;
+									if(app->items[current_item].item_count > MAX_ITEM_STACK)
+									{
+										int rest = app->items[current_item].item_count - MAX_ITEM_STACK;
+										app->items[app->cursor_item].item_count = rest;
+										app->items[current_item].item_count = MAX_ITEM_STACK;
+									}
+									else
+									{
+										app->used_items[app->cursor_item] = false;
+										ZERO_STRUCT(app->items[app->cursor_item]);
+										app->cursor_item = 0;
+									}
+								}
+								else
+								{
+									u16 temp_item = app->cursor_item;
+									app->cursor_item = app->entities[E_PLAYER_INDEX].inventory.items[i];
+									app->entities[E_PLAYER_INDEX].inventory.items[i] = temp_item;
+								}
 							}
 							else
 							{
@@ -433,10 +463,29 @@ int entry(int argc, char **argv)
 						{
 							if(app->is_menu_opened && current_item == equipped_item)
 							{
-								//TODO: clicking the slots while the menu is opened
-								u16 temp_item = app->cursor_item;
-								app->cursor_item = spell_item_uid;
-								app->items[current_item].inventory.items[spell] = temp_item;
+								if(app->items[app->cursor_item].item_id == app->items[spell_item_uid].item_id
+								&& !app->items[spell_item_uid].inventory.is_editable)
+								{
+									app->items[spell_item_uid].item_count += app->items[app->cursor_item].item_count;
+									if(app->items[spell_item_uid].item_count > MAX_ITEM_STACK)
+									{
+										int rest = app->items[spell_item_uid].item_count - MAX_ITEM_STACK;
+										app->items[app->cursor_item].item_count = rest;
+										app->items[spell_item_uid].item_count = MAX_ITEM_STACK;
+									}
+									else
+									{
+										app->used_items[app->cursor_item] = false;
+										ZERO_STRUCT(app->items[app->cursor_item]);
+										app->cursor_item = 0;
+									}
+								}
+								else
+								{
+									u16 temp_item = app->cursor_item;
+									app->cursor_item = spell_item_uid;
+									app->items[current_item].inventory.items[spell] = temp_item;
+								}
 							}
 						}
 					}

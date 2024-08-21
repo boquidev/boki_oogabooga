@@ -12,7 +12,6 @@ main
 	// - highlight/preview tile when a placeable is going to be placed
 	// i don't like how it feels to place blocks now
 
-	- stack items with the mouse
 	- if right click while holding a stackable item, place 1 unit of that item
 			
 	- change perspective of the stone(i know i doesn't help gameplay but it will help me visuallize some stuff)
