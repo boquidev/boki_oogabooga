@@ -122,8 +122,8 @@ enum Entity_flag : u64
 typedef enum Casting_type : u8
 {
 	CASTING_NULL,
-	CASTING_CYCLING,
-	CASTING_NO_CYCLING,
+	CASTING_LEFT,
+	CASTING_RIGHT,
 }Casting_type;
 
 typedef struct Entity

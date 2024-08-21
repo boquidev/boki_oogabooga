@@ -70,7 +70,7 @@ int entry(int argc, char **argv)
 	b8 is_initialized = 0;
 
 
-	float64 last_time = os_get_current_time_in_seconds();
+	float64 last_time = os_get_elapsed_seconds();
 	while (!window.should_close) 
 	{
 		// THIS IS (A LOT!!) FASTER THAN MANUALLY CLEARING THE ARENA (at least with /Od in msvc, haven't compared with /O2)
@@ -499,11 +499,11 @@ int entry(int argc, char **argv)
 			{
 				if(is_key_down(MOUSE_BUTTON_LEFT))
 				{
-					app->entities[E_PLAYER_INDEX].casting_state = CASTING_CYCLING;
+					app->entities[E_PLAYER_INDEX].casting_state = CASTING_LEFT;
 				}
 				if(is_key_down(MOUSE_BUTTON_RIGHT))
 				{
-					app->entities[E_PLAYER_INDEX].casting_state = CASTING_NO_CYCLING;
+					app->entities[E_PLAYER_INDEX].casting_state = CASTING_RIGHT;
 					app->items[equipped_item].inventory.selected_slot = app->items[equipped_item].inventory.size - 1;
 				}
 
@@ -626,6 +626,8 @@ int entry(int argc, char **argv)
 					}
 				}
 
+				//:UPDATING CASTING SPELL
+
 				if(!app->items[casting_item].not_cycle_when_casting // do cycle when casting
 				|| (app->entities[e].already_casted))
 				{
@@ -634,19 +636,8 @@ int entry(int argc, char **argv)
 					if(app->entities[e].casting_cd <= 0)
 					{
 						app->entities[e].casting_cd = app->items[casting_item].casting_cd;
-						// if(app->entities[e].casting_state != CASTING_NO_CYCLING && app->items[casting_item].inventory.size)
-						// {
-						// 	if(app->items[casting_item].not_cycle_when_casting)
-						// 	{
-						// 		app->items[casting_item].inventory.selected_slot = 0;
-						// 	}
-						// 	else
-						// 	{
-						// 		app->items[casting_item].inventory.selected_slot = (app->items[casting_item].inventory.selected_slot+1)%app->items[casting_item].inventory.size;
-						// 	}
-						// }
 
-						if(app->entities[e].casting_state != CASTING_NO_CYCLING)
+						if(app->entities[e].casting_state != CASTING_RIGHT)
 						{
 							if(app->items[casting_item].inventory.size != 0 && !app->items[casting_item].not_cycle_when_casting)
 							{
@@ -662,6 +653,10 @@ int entry(int argc, char **argv)
 									app->items[casting_item].inventory.selected_slot = (app->items[casting_item].inventory.selected_slot+1)%app->items[casting_item].inventory.size;
 								}
 							}
+						}
+						if(equipped_item == app->entities[e].unarmed_inventory && app->entities[e].casting_state != CASTING_RIGHT)
+						{
+							app->items[equipped_item].inventory.selected_slot = 0;
 						}
 
 						app->entities[e].already_casted = false;
@@ -747,7 +742,7 @@ int entry(int argc, char **argv)
 
 		//:RENDER
 
-		draw_frame.view = m4_translate(m4_scalar(1.0f), v3(app->camera_pos.x, app->camera_pos.y, 0));
+		draw_frame.camera_xform = m4_translate(m4_scalar(1.0f), v3(app->camera_pos.x, app->camera_pos.y, 0));
 
 		//:RENDERING TILEMAP
 
@@ -819,7 +814,7 @@ int entry(int argc, char **argv)
 
 		//:RENDERING UI
 
-		draw_frame.view = m4_scalar(1.0f);
+		draw_frame.camera_xform = m4_scalar(1.0f);
       UNTIL(i, app->ui.current_widget_uid)
       {
          if(app->ui.widgets[i].flags != UI_SKIP_RENDERING)
@@ -865,11 +860,11 @@ int entry(int argc, char **argv)
 		gfx_update();
 
 
-		float64 now = os_get_current_time_in_seconds();
+		float64 now = os_get_elapsed_seconds();
 		f32 dt = now - last_time;
 		os_high_precision_sleep((target_dt - dt) * 1000.0);
 		if ((int)now != (int)last_time) log("%.2f FPS\n%.2fms", 1.0/(now-last_time), (now-last_time)*1000);
-		last_time = os_get_current_time_in_seconds();
+		last_time = os_get_elapsed_seconds();
 	}
 
 	return 0;
