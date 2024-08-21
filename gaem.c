@@ -701,6 +701,7 @@ int entry(int argc, char **argv)
 							if(distance < tiles_px_size.x)
 							{
 								u16 first_empty_slot = NULL_INDEX16;
+								u16* already_found_stack_item = 0;
 								u16 total_count = 0;
 								UNTIL(slot, INVENTORY_SIZE)
 								{
@@ -710,18 +711,42 @@ int entry(int argc, char **argv)
 									&& app->items[app->entities[e].item].item_id == app->items[e2_item_uid].item_id
 									&& app->items[app->entities[e2].inventory.items[slot]].item_count < MAX_ITEM_STACK)
 									{
-										total_count = app->items[app->entities[e].item].item_count + app->items[e2_item_uid].item_count;
-
-										app->items[e2_item_uid].item_count = min(total_count, MAX_ITEM_STACK);
-										
-										app->used_items[app->entities[e].item] = 0;
-										ZERO_STRUCT(app->items[app->entities[e].item]);
+										already_found_stack_item = &app->entities[e2].inventory.items[slot];
 										break;
 									}
 									if(first_empty_slot == NULL_INDEX16 && app->items[app->entities[e2].inventory.items[slot]].item_id == ITEM_NULL)
 									{
 										first_empty_slot = (u16)slot;
 									}
+								}
+								if(!already_found_stack_item)
+								{// CHECK UNARMED INVENTORY
+									UNTIL(slot, app->items[app->entities[e2].unarmed_inventory].inventory.size)
+									{
+										u16 e2_item_uid = app->items[app->entities[e2].unarmed_inventory].inventory.items[slot];
+
+										if(!app->items[app->entities[e].item].inventory.is_editable // if it's editable, it's not stackable
+										&& app->items[app->entities[e].item].item_id == app->items[e2_item_uid].item_id
+										&& app->items[app->entities[e2].inventory.items[slot]].item_count < MAX_ITEM_STACK)
+										{
+											already_found_stack_item = &app->items[app->entities[e2].unarmed_inventory].inventory.items[slot];
+											break;
+										}
+										if(first_empty_slot == NULL_INDEX16 && app->items[app->entities[e2].inventory.items[slot]].item_id == ITEM_NULL)
+										{
+											first_empty_slot = (u16)slot;
+										}
+									}
+								}
+								if(already_found_stack_item)
+								{
+									u16 e2_item_uid = *already_found_stack_item;
+									total_count = app->items[app->entities[e].item].item_count + app->items[e2_item_uid].item_count;
+
+									app->items[e2_item_uid].item_count = min(total_count, MAX_ITEM_STACK);
+									
+									app->used_items[app->entities[e].item] = 0;
+									ZERO_STRUCT(app->items[app->entities[e].item]);
 								}
 								if(!total_count)
 								{

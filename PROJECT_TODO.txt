@@ -13,7 +13,6 @@ main
 	// i don't like how it feels to place blocks now
 
 	
-	- check unarmed inventory for stacking when collecting an item
 	- fill hotbar from the last slot to the first
 	- stack items with the mouse
 	- if right click while holding a stackable item, place 1 unit of that item
