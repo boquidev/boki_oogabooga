@@ -863,7 +863,7 @@ int entry(int argc, char **argv)
 			Int2 placing_tile_pos = world_pos_to_tile_pos(placing_world_pos, tiles_px_size);
 			b8 is_holding_placeable = app->items[app->entities[E_PLAYER_INDEX].inventory.items[app->entities[E_PLAYER_INDEX].inventory.selected_slot]].item_id == ITEM_STONE;
 
-			for(int y=render_rect_min.y; y < render_rect_max.y; y++)
+			for(int y=render_rect_max.y-1; y >= render_rect_min.y; y--)
 			{
 				f32 y_final_pos = ((f32)(y - WORLD_Y_LENGTH/2)*tiles_px_size.y);
 				for(int x = render_rect_min.x; x < render_rect_max.x; x++)
@@ -878,7 +878,7 @@ int entry(int argc, char **argv)
 							if(x==placing_tile_pos.x && y==placing_tile_pos.y){
 								tile_color = v4(1,1,0,1);
 							}
-							draw_image(textures[TEX_STONE], v2(x_final_pos, y_final_pos), tiles_px_size, tile_color);
+							draw_image(textures[TEX_STONE], v2(x_final_pos, y_final_pos), v2(textures[TEX_STONE]->width, textures[TEX_STONE]->height), tile_color);
 						}
 					}
 				}
