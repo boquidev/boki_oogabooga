@@ -11,6 +11,7 @@ int entry(int argc, char **argv)
 	window.x = 200;
 	window.y = 90;
 	window.clear_color = v4(.5, .5, .5, 1);
+	window.fullscreen = true;
 
 	//TODO: for now everything will just shrink and stretch with the window
 	Int2 virtual_screen_size = {.x = 320, .y= 180};
@@ -24,7 +25,7 @@ int entry(int argc, char **argv)
 
 	{
 		textures[TEX_BLANK] = load_image_from_disk(fixed_string("data/textures/blank.png"), get_heap_allocator());
-		textures[TEX_PLAYER] = load_image_from_disk(fixed_string("data/textures/player.png"), get_heap_allocator());
+		textures[TEX_PLAYER] = load_image_from_disk(fixed_string("data/textures/npc.png"), get_heap_allocator());
 		textures[TEX_STONE] = load_image_from_disk(fixed_string("data/textures/stone.png"), get_heap_allocator());
 		textures[TEX_WAND] = load_image_from_disk(fixed_string("data/textures/wand.png"), get_heap_allocator());
 		textures[TEX_PROJECTILE] = load_image_from_disk(fixed_string("data/textures/projectile.png"), get_heap_allocator());
@@ -679,6 +680,7 @@ int entry(int argc, char **argv)
 						Item_id spell = app->items[casting_item].item_id;
 						switch(spell)
 						{
+							case ITEM_NULL:
 							case ITEM_SPELL_NULL:
 							break;
 							case ITEM_SPELL_DESTROY:
@@ -697,7 +699,18 @@ int entry(int argc, char **argv)
 								}
 							}
 							break;
+							case ITEM_SPELL_PROJECTILE:
+							{
+								u16 new_entity_uid = get_first_available_index(app->used_entities, MAX_ENTITIES);
+								app->entities[new_entity_uid].pos = app->entities[e].pos;
+								app->entities[new_entity_uid].tex_uid = TEX_PROJECTILE;
+								app->entities[new_entity_uid].flags = E_RENDER|E_DIE_ON_COLLISION;
+								app->entities[new_entity_uid].move_direction = app->entities[e].target_direction;
+								app->entities[new_entity_uid].movement_speed = 200.0f;
+							}
+							break;
 							default:
+								assert(false, "unknown spell id");
 							break;
 						}
 					}
@@ -835,11 +848,19 @@ int entry(int argc, char **argv)
 
 				//:UPDATE ENTITY POSITIONS
 
+				//:ENTITY VS TILE COLLISIONS
 				V2 new_pos = v2_add(app->entities[e].pos, (v2_mulf(app->entities[e].move_direction, app->entities[e].movement_speed*fixed_dt)));
 				Int2 tile_pos = world_pos_to_tile_pos(new_pos, tiles_px_size);
 				
 				if(!app->world[tile_pos.y][tile_pos.x]){
 					app->entities[e].pos = new_pos;
+				}else{
+					if(app->entities[e].flags & E_DIE_ON_COLLISION)
+					{
+						// DESTROY ENTITY
+						app->used_entities[e] = 0;
+						ZERO_STRUCT(app->entities[e]);
+					}
 				}
 			}
 		}

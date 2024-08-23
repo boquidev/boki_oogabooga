@@ -116,12 +116,13 @@ typedef struct Item
 	Inventory inventory;
 }Item;
 
-enum Entity_flag : u64
+typedef enum Entity_flag : u64
 {
    E_RENDER = 0b1,
 	E_PICKUP = 0b10,
    E_LAST_FLAG = 0b100,
-};
+	E_DIE_ON_COLLISION = 0b1000,
+}Entity_flag;
 
 typedef enum Casting_state : u8
 {
@@ -140,9 +141,9 @@ typedef struct Entity
 
    V2 pos;
 
-   V2 move_direction;
+   V2 move_direction; // this is always normalized (probably)
    f32 movement_speed;
-	V2 target_direction;
+	V2 target_direction; // this is always normalized (probably)
 
 	f32 casting_cd;
 	b8 stop_cycling;
