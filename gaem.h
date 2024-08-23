@@ -1,3 +1,4 @@
+#define DEV_TESTING 1
 
 enum Texture_id
 {
@@ -5,9 +6,11 @@ enum Texture_id
 	TEX_PLAYER,
    TEX_STONE,
    TEX_WAND,
+	TEX_PROJECTILE,
    TEX_SPELL_NULL,
    TEX_SPELL_PLACE_ITEM,
    TEX_SPELL_DESTROY_TILE,
+	TEX_SPELL_PROJECTILE,
 
 	TEX_LAST
 };
@@ -93,6 +96,7 @@ typedef enum Item_id : u16
 
 	ITEM_SPELL_NULL,
 	ITEM_SPELL_DESTROY,
+	ITEM_SPELL_PROJECTILE,
 	ITEM_SPELL_LAST,
 
 	ITEM_WAND,
@@ -119,12 +123,12 @@ enum Entity_flag : u64
    E_LAST_FLAG = 0b100,
 };
 
-typedef enum Casting_type : u8
+typedef enum Casting_state : u8
 {
 	CASTING_NULL,
 	CASTING_LEFT,
 	CASTING_RIGHT,
-}Casting_type;
+}Casting_state;
 
 typedef struct Entity
 {
@@ -132,6 +136,8 @@ typedef struct Entity
 	struct {
 		u16 item;
 	};// pickup
+	u16 tex_uid;
+
    V2 pos;
 
    V2 move_direction;
@@ -141,7 +147,7 @@ typedef struct Entity
 	f32 casting_cd;
 	b8 stop_cycling;
 	b8 already_casted;
-	Casting_type casting_state;
+	Casting_state casting_state;
 	
 	Inventory inventory;
 	u16 unarmed_inventory;

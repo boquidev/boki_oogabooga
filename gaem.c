@@ -27,9 +27,11 @@ int entry(int argc, char **argv)
 		textures[TEX_PLAYER] = load_image_from_disk(fixed_string("data/textures/player.png"), get_heap_allocator());
 		textures[TEX_STONE] = load_image_from_disk(fixed_string("data/textures/stone.png"), get_heap_allocator());
 		textures[TEX_WAND] = load_image_from_disk(fixed_string("data/textures/wand.png"), get_heap_allocator());
+		textures[TEX_PROJECTILE] = load_image_from_disk(fixed_string("data/textures/projectile.png"), get_heap_allocator());
 		textures[TEX_SPELL_NULL] = load_image_from_disk(fixed_string("data/textures/spells/spell0000.png"), get_heap_allocator());
 		textures[TEX_SPELL_PLACE_ITEM] = load_image_from_disk(fixed_string("data/textures/spells/spell0001.png"), get_heap_allocator());
 		textures[TEX_SPELL_DESTROY_TILE] = load_image_from_disk(fixed_string("data/textures/spells/spell0002.png"), get_heap_allocator());
+		textures[TEX_SPELL_PROJECTILE] = load_image_from_disk(fixed_string("data/textures/spells/spell0003.png"), get_heap_allocator());
 
 		UNTIL(t, TEX_LAST)
 		{
@@ -148,6 +150,7 @@ int entry(int argc, char **argv)
 			app->item_id_to_tex_uid[ITEM_WAND] = TEX_WAND;
 			app->item_id_to_tex_uid[ITEM_SPELL_NULL] = TEX_SPELL_NULL;
 			app->item_id_to_tex_uid[ITEM_SPELL_DESTROY] = TEX_SPELL_DESTROY_TILE;
+			app->item_id_to_tex_uid[ITEM_SPELL_PROJECTILE] = TEX_SPELL_PROJECTILE;
 
 			//:INITIALIZE STATIC ITEMS
 			UNTIL(id, ITEM_LAST_ID)
@@ -173,6 +176,7 @@ int entry(int argc, char **argv)
 					break;
 					case ITEM_SPELL_NULL: 
 					case ITEM_SPELL_DESTROY: 
+					case ITEM_SPELL_PROJECTILE:
 					{
 						// this is to make them not stackable
 						app->items[id].inventory.is_editable = true;
@@ -200,6 +204,7 @@ int entry(int argc, char **argv)
 			app->entities[E_PLAYER_INDEX].flags = E_RENDER;
 			app->entities[E_PLAYER_INDEX].unarmed_inventory = get_first_available_index(app->used_items, MAX_ITEMS);
 			app->entities[E_PLAYER_INDEX].already_casted = true;
+			app->entities[E_PLAYER_INDEX].tex_uid = TEX_PLAYER;
 			app->items[app->entities[E_PLAYER_INDEX].unarmed_inventory].inventory.is_editable = true;
 			app->items[app->entities[E_PLAYER_INDEX].unarmed_inventory].inventory.size = 2;
 			app->items[app->entities[E_PLAYER_INDEX].unarmed_inventory].inventory.items[0] = ITEM_SPELL_DESTROY;
@@ -207,21 +212,11 @@ int entry(int argc, char **argv)
 			app->items[app->entities[E_PLAYER_INDEX].unarmed_inventory].casting_cd = .5f;
 			app->items[app->entities[E_PLAYER_INDEX].unarmed_inventory].not_cycle_when_casting = true;
 
-			UNTIL(slot, INVENTORY_SIZE)
-			{
-				if(!slot) continue;
-				u16 new_stone = get_first_available_index(app->used_items, MAX_ITEMS);
-				app->entities[E_PLAYER_INDEX].inventory.items[slot] = new_stone;
-				app->items[new_stone] = app->items[ITEM_STONE];
-				app->items[new_stone].item_count = 2;
-				
-			}
-
 		}
 		if(is_key_just_pressed('T'))
 		{
 			is_initialized = false;
-		}	
+		}
 
 		int delta_wheel = 0;
 		UNTIL(i, input_frame.number_of_events)
@@ -577,26 +572,38 @@ int entry(int argc, char **argv)
 					app->items[equipped_item].inventory.selected_slot = app->items[equipped_item].inventory.size - 1;
 				}
 
-				if(is_key_just_pressed(KEY_F1) == 1)
-				{
-					u16 debug_wand_pickup_uid = get_first_available_index(app->used_entities, MAX_ENTITIES);
-					app->entities[debug_wand_pickup_uid].flags = E_RENDER|E_PICKUP;
-					u16 debug_wand_item_uid = get_first_available_index(app->used_items, MAX_ITEMS);
-					app->entities[debug_wand_pickup_uid].item = debug_wand_item_uid;
-					app->items[debug_wand_item_uid] = app->items[ITEM_WAND];
+				#if DEV_TESTING
+					if(is_key_just_pressed(KEY_F1) == 1)
+					{
+						u16 debug_wand_pickup_uid = get_first_available_index(app->used_entities, MAX_ENTITIES);
+						app->entities[debug_wand_pickup_uid].flags = E_RENDER|E_PICKUP;
+						u16 debug_wand_item_uid = get_first_available_index(app->used_items, MAX_ITEMS);
+						app->entities[debug_wand_pickup_uid].item = debug_wand_item_uid;
+						app->items[debug_wand_item_uid] = app->items[ITEM_WAND];
 
-					app->entities[debug_wand_pickup_uid].pos = cursor_world_pos;
-				}
-				if(is_key_just_pressed(KEY_F2) == 1)
-				{
-					u16 debug_spell = get_first_available_index(app->used_entities, MAX_ENTITIES);
-					app->entities[debug_spell].flags = E_RENDER|E_PICKUP;
-					u16 debug_wand_item_uid = get_first_available_index(app->used_items, MAX_ITEMS);
-					app->entities[debug_spell].item = debug_wand_item_uid;
-					app->items[debug_wand_item_uid] = app->items[ITEM_SPELL_DESTROY];
+						app->entities[debug_wand_pickup_uid].pos = cursor_world_pos;
+					}
+					if(is_key_just_pressed(KEY_F2) == 1)
+					{
+						u16 debug_spell = get_first_available_index(app->used_entities, MAX_ENTITIES);
+						app->entities[debug_spell].flags = E_RENDER|E_PICKUP;
+						u16 debug_wand_item_uid = get_first_available_index(app->used_items, MAX_ITEMS);
+						app->entities[debug_spell].item = debug_wand_item_uid;
+						app->items[debug_wand_item_uid] = app->items[ITEM_SPELL_DESTROY];
 
-					app->entities[debug_spell].pos = cursor_world_pos;
-				}
+						app->entities[debug_spell].pos = cursor_world_pos;
+					}
+					if(is_key_just_pressed(KEY_F3) == 1)
+					{
+						u16 debug_spell = get_first_available_index(app->used_entities, MAX_ENTITIES);
+						app->entities[debug_spell].flags = E_RENDER|E_PICKUP;
+						u16 debug_wand_item_uid = get_first_available_index(app->used_items, MAX_ITEMS);
+						app->entities[debug_spell].item = debug_wand_item_uid;
+						app->items[debug_wand_item_uid] = app->items[ITEM_SPELL_PROJECTILE];
+
+						app->entities[debug_spell].pos = cursor_world_pos;
+					}
+				#endif
 			}
 		}
 
@@ -872,7 +879,6 @@ int entry(int argc, char **argv)
 					{
 						if(app->world[y][x] || (is_holding_placeable && x==placing_tile_pos.x && y==placing_tile_pos.y))
 						{
-							
 							Color tile_color = {1,1,1,1};
 							// if(x==cursor_tile_pos.x && y==cursor_tile_pos.y){
 							if(x==placing_tile_pos.x && y==placing_tile_pos.y){
@@ -892,10 +898,10 @@ int entry(int argc, char **argv)
 			if(app->entities[e].flags & E_RENDER)
 			{
 				u16 tex_uid;
-				if(e == E_PLAYER_INDEX){
-					tex_uid = TEX_PLAYER;
-				}else{
+				if(app->entities[e].flags & E_PICKUP){
 					tex_uid = app->item_id_to_tex_uid[app->items[app->entities[e].item].item_id];
+				}else{
+					tex_uid = app->entities[e].tex_uid;
 				}
 				
 				V2 image_screen_size = {(f32)textures[tex_uid]->width, (f32)textures[tex_uid]->height};
@@ -963,7 +969,6 @@ int entry(int argc, char **argv)
 		float64 now = os_get_elapsed_seconds();
 		f32 dt = now - last_time;
 		os_high_precision_sleep((target_dt - dt) * 1000.0);
-		if ((int)now != (int)last_time) log("%.2f FPS\n%.2fms", 1.0/(now-last_time), (now-last_time)*1000);
 		last_time = os_get_elapsed_seconds();
 	}
 
