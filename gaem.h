@@ -11,6 +11,7 @@ enum Texture_id
    TEX_SPELL_PLACE_ITEM,
    TEX_SPELL_DESTROY_TILE,
 	TEX_SPELL_PROJECTILE,
+	TEX_SPELL_DASH,
 
 	TEX_LAST
 };
@@ -97,6 +98,7 @@ typedef enum Item_id : u16
 	ITEM_SPELL_NULL,
 	ITEM_SPELL_DESTROY,
 	ITEM_SPELL_PROJECTILE,
+	ITEM_SPELL_DASH,
 	ITEM_SPELL_LAST,
 
 	ITEM_WAND,
@@ -141,9 +143,14 @@ typedef struct Entity
 
    V2 pos;
 
-   V2 move_direction; // this is always normalized (probably)
-   f32 movement_speed;
+	V2 velocity;
+	V2 accel;
+	f32 friction;
+	
+   f32 base_speed;
 	V2 target_direction; // this is always normalized (probably)
+
+	f32 lifetime;
 
 	f32 casting_cd;
 	b8 stop_cycling;
@@ -284,8 +291,8 @@ void ui_pop(Ui_data* ui)
 //TODO: maybe reserve the 0 index for the nil_entity and put player in 1?
 #define E_PLAYER_INDEX 0
 
-#define WORLD_Y_LENGTH 100
-#define WORLD_X_LENGTH 100
+#define WORLD_Y_LENGTH 1000
+#define WORLD_X_LENGTH 1000
 #define MAX_ITEMS 0xffff
 
 typedef struct App_data
@@ -461,4 +468,9 @@ u16 get_entity_equipped_item_index(App_data* app, u16 entity_index)
 b8 is_placeable_item(Item_id item_id)
 {
 	return ITEM_PLACEABLE_FIRST < item_id && item_id < ITEM_PLACEABLE_LAST;
+}
+
+V2 calculate_delta_velocity(V2 velocity, V2 acceleration, f32 friction)
+{
+	return  v2_sub(acceleration , v2_mulf(velocity, friction));
 }

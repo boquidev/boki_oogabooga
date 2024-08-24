@@ -33,6 +33,7 @@ int entry(int argc, char **argv)
 		textures[TEX_SPELL_PLACE_ITEM] = load_image_from_disk(fixed_string("data/textures/spells/spell0001.png"), get_heap_allocator());
 		textures[TEX_SPELL_DESTROY_TILE] = load_image_from_disk(fixed_string("data/textures/spells/spell0002.png"), get_heap_allocator());
 		textures[TEX_SPELL_PROJECTILE] = load_image_from_disk(fixed_string("data/textures/spells/spell0003.png"), get_heap_allocator());
+		textures[TEX_SPELL_DASH] = load_image_from_disk(fixed_string("data/textures/spells/spell0004.png"), get_heap_allocator());
 
 		UNTIL(t, TEX_LAST)
 		{
@@ -152,6 +153,7 @@ int entry(int argc, char **argv)
 			app->item_id_to_tex_uid[ITEM_SPELL_NULL] = TEX_SPELL_NULL;
 			app->item_id_to_tex_uid[ITEM_SPELL_DESTROY] = TEX_SPELL_DESTROY_TILE;
 			app->item_id_to_tex_uid[ITEM_SPELL_PROJECTILE] = TEX_SPELL_PROJECTILE;
+			app->item_id_to_tex_uid[ITEM_SPELL_DASH] = TEX_SPELL_DASH;
 
 			//:INITIALIZE STATIC ITEMS
 			UNTIL(id, ITEM_LAST_ID)
@@ -178,6 +180,7 @@ int entry(int argc, char **argv)
 					case ITEM_SPELL_NULL: 
 					case ITEM_SPELL_DESTROY: 
 					case ITEM_SPELL_PROJECTILE:
+					case ITEM_SPELL_DASH:
 					{
 						// this is to make them not stackable
 						app->items[id].inventory.is_editable = true;
@@ -206,6 +209,7 @@ int entry(int argc, char **argv)
 			app->entities[E_PLAYER_INDEX].unarmed_inventory = get_first_available_index(app->used_items, MAX_ITEMS);
 			app->entities[E_PLAYER_INDEX].already_casted = true;
 			app->entities[E_PLAYER_INDEX].tex_uid = TEX_PLAYER;
+			app->entities[E_PLAYER_INDEX].friction = 5.0f;
 			app->items[app->entities[E_PLAYER_INDEX].unarmed_inventory].inventory.is_editable = true;
 			app->items[app->entities[E_PLAYER_INDEX].unarmed_inventory].inventory.size = 2;
 			app->items[app->entities[E_PLAYER_INDEX].unarmed_inventory].inventory.items[0] = ITEM_SPELL_DESTROY;
@@ -604,16 +608,26 @@ int entry(int argc, char **argv)
 
 						app->entities[debug_spell].pos = cursor_world_pos;
 					}
+					if(is_key_just_pressed(KEY_F4) == 1)
+					{
+						u16 debug_spell = get_first_available_index(app->used_entities, MAX_ENTITIES);
+						app->entities[debug_spell].flags = E_RENDER|E_PICKUP;
+						u16 debug_wand_item_uid = get_first_available_index(app->used_items, MAX_ITEMS);
+						app->entities[debug_spell].item = debug_wand_item_uid;
+						app->items[debug_wand_item_uid] = app->items[ITEM_SPELL_DASH];
+
+						app->entities[debug_spell].pos = cursor_world_pos;
+					}
 				#endif
 			}
 		}
 
-		app->entities[E_PLAYER_INDEX].move_direction = normalized_input_direction;
-		app->entities[E_PLAYER_INDEX].movement_speed = 40;
+		app->entities[E_PLAYER_INDEX].base_speed = 200;
 		if(is_key_down(KEY_SHIFT) > 0)
 		{
-			app->entities[E_PLAYER_INDEX].movement_speed = 200.0f;
+			app->entities[E_PLAYER_INDEX].base_speed = 1000;
 		}
+		app->entities[E_PLAYER_INDEX].accel = v2_mulf(normalized_input_direction, app->entities[E_PLAYER_INDEX].base_speed);
 		
 		//:UPDATE ENTITIES
 		#define DEFAULT_RANGE (2*tiles_px_size.x)
@@ -623,6 +637,16 @@ int entry(int argc, char **argv)
 			// f32 x_factor = 160.0f/90;e2_normalize(cursor_world_pos - app->entities[E_PLAYER_INDEX].pos.v2);
 			if(app->used_entities[e])
 			{
+				if(app->entities[e].lifetime > 0)
+				{
+					app->entities[e].lifetime -= fixed_dt;
+					if(app->entities[e].lifetime <= 0)
+					{
+						// DESTROY ENTITY
+						app->used_entities[e] = false;
+						ZERO_STRUCT(app->entities[e]);
+					}
+				}
 				//TODO: this will be moving across the spells inventory
 				u16 equipped_item = get_entity_equipped_item_index(app, e);
 				u16 casting_item = equipped_item;
@@ -682,6 +706,7 @@ int entry(int argc, char **argv)
 						{
 							case ITEM_NULL:
 							case ITEM_SPELL_NULL:
+							case ITEM_WAND:
 							break;
 							case ITEM_SPELL_DESTROY:
 							{
@@ -705,8 +730,15 @@ int entry(int argc, char **argv)
 								app->entities[new_entity_uid].pos = app->entities[e].pos;
 								app->entities[new_entity_uid].tex_uid = TEX_PROJECTILE;
 								app->entities[new_entity_uid].flags = E_RENDER|E_DIE_ON_COLLISION;
-								app->entities[new_entity_uid].move_direction = app->entities[e].target_direction;
-								app->entities[new_entity_uid].movement_speed = 200.0f;
+								app->entities[new_entity_uid].velocity = v2_mulf(app->entities[e].target_direction, 400.0f);
+								app->entities[new_entity_uid].friction = 4.0f;
+								app->entities[new_entity_uid].accel = v2_mulf(app->entities[e].target_direction, 4.0f);
+								app->entities[new_entity_uid].lifetime = 1.0f;
+							}
+							break;
+							case ITEM_SPELL_DASH:
+							{
+								app->entities[e].velocity = v2_mulf(app->entities[e].target_direction, 200.0f);
 							}
 							break;
 							default:
@@ -847,9 +879,11 @@ int entry(int argc, char **argv)
 
 
 				//:UPDATE ENTITY POSITIONS
+				V2 delta_velocity = calculate_delta_velocity(app->entities[e].velocity, app->entities[e].accel, app->entities[e].friction);
+				app->entities[e].velocity = v2_add(app->entities[e].velocity, v2_mulf(delta_velocity, fixed_dt));
 
 				//:ENTITY VS TILE COLLISIONS
-				V2 new_pos = v2_add(app->entities[e].pos, (v2_mulf(app->entities[e].move_direction, app->entities[e].movement_speed*fixed_dt)));
+				V2 new_pos = v2_add(app->entities[e].pos, v2_mulf(app->entities[e].velocity, fixed_dt));
 				Int2 tile_pos = world_pos_to_tile_pos(new_pos, tiles_px_size);
 				
 				if(!app->world[tile_pos.y][tile_pos.x]){

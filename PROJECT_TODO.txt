@@ -23,10 +23,7 @@ main: //////////////////////////////////////////////////////////////////////////
 	// i don't like how it feels to place blocks now
 	
 	- make spells
-		- shoot a projectile
-			- make some kind of projectile entity
-			- and make some entity to test the projectile on
-		- teleport caster
+		- dash
 			
 	- add modifier spells, which add properties to the next non-modifier spell casted
 		// both of these could be the same 
