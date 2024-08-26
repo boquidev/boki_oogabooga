@@ -18,19 +18,7 @@ bugs/problems:
 
 
 
-main: //////////////////////////////////////////////////////////////////////////////////////////////////
-	// - highlight/preview tile when a placeable is going to be placed
-	// i don't like how it feels to place blocks now
-	
-	- make spells
-		- dash
-			
-	- add modifier spells, which add properties to the next non-modifier spell casted
-		// both of these could be the same 
-		// but then i would have to introduce some kind of health to each tile
-		- modifier destroys tiles // replace current destroy spell with this
-		- add damage
-		
+main: //////////////////////////////////////////////////////////////////////////////////////////////////			
 	// finally start making some survival/crafty stuff
 	
 	// i was originally thinking this was going to have combat so i needed to make an enemy
@@ -47,7 +35,6 @@ main: //////////////////////////////////////////////////////////////////////////
 		// 
 
 	// I will just do my original idea, playtest and check what part of the game people likes the most
-
 	
 	- add a crafting system
 		- i am thinking of an in-world crafting system
@@ -76,9 +63,13 @@ main: //////////////////////////////////////////////////////////////////////////
 			// or maybe i make the world automatically repopulate materials overtime 
 			// instead of the player having to have dedicated farms for materials
 			
-	
+	- add modifier spells, which add properties to the next non-modifier spell casted
+		// both of these could be the same 
+		// but then i would have to introduce some kind of health to each tile
+		- modifier destroys tiles // replace current destroy spell with this
+		- add damage
 
-	- make more spells (a lot later)
+	- make more spells
 		- fire property
 		- ice property
 		- gives light // i need a light system first

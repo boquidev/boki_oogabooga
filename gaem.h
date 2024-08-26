@@ -148,7 +148,7 @@ typedef struct Entity
 	f32 friction;
 	
    f32 base_speed;
-	V2 target_direction; // this is always normalized (probably)
+	V2 target_relative_pos; 
 
 	f32 lifetime;
 

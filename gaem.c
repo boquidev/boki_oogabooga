@@ -564,7 +564,7 @@ int entry(int argc, char **argv)
 		{
 			u16 equipped_item = get_entity_equipped_item_index(app, E_PLAYER_INDEX);
 
-			app->entities[E_PLAYER_INDEX].target_direction = v2_normalize(v2_sub(cursor_world_pos, app->entities[E_PLAYER_INDEX].pos));
+			app->entities[E_PLAYER_INDEX].target_relative_pos = v2_sub(cursor_world_pos, app->entities[E_PLAYER_INDEX].pos);
 			if(!is_mouse_in_ui)
 			{
 				if(is_key_down(MOUSE_BUTTON_LEFT))
@@ -619,6 +619,10 @@ int entry(int argc, char **argv)
 						app->entities[debug_spell].pos = cursor_world_pos;
 					}
 				#endif
+			}
+			UNTIL(k, 9)
+			{
+				if(is_key_just_pressed('1'+ k))	app->entities[E_PLAYER_INDEX].inventory.selected_slot = k;
 			}
 		}
 
@@ -682,7 +686,9 @@ int entry(int argc, char **argv)
 
 					if(is_placeable_item(app->items[casting_item].item_id))
 					{
-						V2 placing_world_pos = v2_add(app->entities[e].pos, v2_mulf(app->entities[e].target_direction, DEFAULT_RANGE));
+						f32 target_full_distance = v2_length(app->entities[e].target_relative_pos);
+						f32 target_distance = min(DEFAULT_RANGE, target_full_distance);
+						V2 placing_world_pos = v2_add(app->entities[e].pos, v2_mulf(v2_normalize(app->entities[e].target_relative_pos), target_distance));
 						Int2 placing_tilemap_pos = world_pos_to_tile_pos(placing_world_pos, tiles_px_size);
 
 						if(!app->world[placing_tilemap_pos.y][placing_tilemap_pos.x])
@@ -714,7 +720,7 @@ int entry(int argc, char **argv)
 								V2 current_pos = app->entities[e].pos;
 								UNTIL(step, 10)
 								{
-									V2 test_world_pos = v2_add(current_pos , v2_mulf(app->entities[e].target_direction, (step*DEFAULT_RANGE/10)));
+									V2 test_world_pos = v2_add(current_pos , v2_mulf(v2_normalize(app->entities[e].target_relative_pos), (step*DEFAULT_RANGE/10)));
 									Int2 test_tilemap_pos = world_pos_to_tile_pos(test_world_pos, tiles_px_size);
 									if(app->world[test_tilemap_pos.y][test_tilemap_pos.x])
 									{
@@ -730,15 +736,15 @@ int entry(int argc, char **argv)
 								app->entities[new_entity_uid].pos = app->entities[e].pos;
 								app->entities[new_entity_uid].tex_uid = TEX_PROJECTILE;
 								app->entities[new_entity_uid].flags = E_RENDER|E_DIE_ON_COLLISION;
-								app->entities[new_entity_uid].velocity = v2_mulf(app->entities[e].target_direction, 400.0f);
+								app->entities[new_entity_uid].velocity = v2_mulf(v2_normalize(app->entities[e].target_relative_pos), 400.0f);
 								app->entities[new_entity_uid].friction = 4.0f;
-								app->entities[new_entity_uid].accel = v2_mulf(app->entities[e].target_direction, 4.0f);
+								app->entities[new_entity_uid].accel = v2_mulf(v2_normalize(app->entities[e].target_relative_pos), 4.0f);
 								app->entities[new_entity_uid].lifetime = 1.0f;
 							}
 							break;
 							case ITEM_SPELL_DASH:
 							{
-								app->entities[e].velocity = v2_mulf(app->entities[e].target_direction, 200.0f);
+								app->entities[e].velocity = v2_mulf(v2_normalize(app->entities[e].target_relative_pos), 200.0f);
 							}
 							break;
 							default:
@@ -921,7 +927,10 @@ int entry(int argc, char **argv)
 		render_rect_max.y = clamp(camera_tile_pos.y + render_rect_size.y/2, render_rect_size.y, WORLD_Y_LENGTH);
 		
 		{
-			V2 placing_world_pos = v2_add(app->entities[E_PLAYER_INDEX].pos, v2_mulf(app->entities[E_PLAYER_INDEX].target_direction, DEFAULT_RANGE));
+			f32 full_target_distance = v2_length(app->entities[E_PLAYER_INDEX].target_relative_pos);
+			f32 target_distance = min(DEFAULT_RANGE, full_target_distance);
+			V2 placing_world_pos = v2_add(app->entities[E_PLAYER_INDEX].pos, v2_mulf(v2_normalize(app->entities[E_PLAYER_INDEX].target_relative_pos), target_distance));
+			
 			Int2 placing_tile_pos = world_pos_to_tile_pos(placing_world_pos, tiles_px_size);
 			b8 is_holding_placeable = app->items[app->entities[E_PLAYER_INDEX].inventory.items[app->entities[E_PLAYER_INDEX].inventory.selected_slot]].item_id == ITEM_STONE;
 
