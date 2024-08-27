@@ -154,7 +154,6 @@ typedef struct Entity
 
 	f32 casting_cd;
 	b8 stop_cycling;
-	b8 already_casted;
 	Casting_state casting_state;
 	
 	Inventory inventory;
@@ -286,6 +285,18 @@ void ui_pop(Ui_data* ui)
 	ui->current_parent_uid = ui->widgets[ui->current_parent_uid].parent_uid;
 }
 
+typedef enum Tile_id : u8
+{
+	TILE_NULL,
+	TILE_STONE,
+	TILE_LAST,
+}Tile_id;
+
+typedef struct Tile
+{
+	Tile_id id;
+}Tile;
+
 #define MAX_ENTITIES 1000
 
 //TODO: maybe reserve the 0 index for the nil_entity and put player in 1?
@@ -304,7 +315,7 @@ typedef struct App_data
 	u8 used_entities[MAX_ENTITIES];
    Ui_data ui;
 
-   u8 world [WORLD_Y_LENGTH][WORLD_X_LENGTH];
+   Tile world [WORLD_Y_LENGTH][WORLD_X_LENGTH];
 
    b8 is_menu_opened;
 
@@ -413,7 +424,7 @@ V2 tile_to_pos(Int2 tile, V2 tiles_screen_size)
 
 void destroy_tile(App_data* app, Int2 tile_pos, V2 tiles_screen_size)
 {
-	app->world[tile_pos.y][tile_pos.x] = 0;
+	app->world[tile_pos.y][tile_pos.x].id = TILE_NULL;
 	u16 e_id = get_first_available_index(app->used_entities, MAX_ENTITIES);
 	app->entities[e_id].flags = E_PICKUP|E_RENDER;
 	u16 new_item_id = get_first_available_index(app->used_items, MAX_ITEMS);

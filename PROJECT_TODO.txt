@@ -9,7 +9,9 @@ low priority:
 	just because it makes the recursion easier in some parts, cuz right now i had to use a u16*
 
 	- if right click while holding a stackable item, place 1 unit of that item
+	- chest
 
+	- UI element background
 
 
 bugs/problems:
@@ -19,6 +21,8 @@ bugs/problems:
 
 
 main: //////////////////////////////////////////////////////////////////////////////////////////////////			
+	// i am beginning to think that autocycling spells without input is not the best idea
+
 	// finally start making some survival/crafty stuff
 	
 	// i was originally thinking this was going to have combat so i needed to make an enemy

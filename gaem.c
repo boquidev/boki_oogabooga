@@ -1,5 +1,5 @@
 #define UNTIL(iterator_name, iterations_count) for(u32 iterator_name=0; iterator_name<iterations_count; iterator_name++)
-
+#define DEFAULT_TEXT_HEIGHT 20
 #include "gaem.h"
 
 int entry(int argc, char **argv) 
@@ -133,13 +133,14 @@ int entry(int argc, char **argv)
 						u32 center_y = WORLD_Y_LENGTH/2;
 
 						if(noise_value < .5f || (center_x-10 < x && x < center_x+10 && center_y-10 < y && y < center_y+10)){
-							app->world[y][x] = 0;
+							app->world[y][x].id = TILE_NULL;
 						}else{
-							app->world[y][x] = 1;
+							app->world[y][x].id = TILE_STONE;
 						}
 					}
 				}
 			}
+			draw_text(default_font, fixed_string("just initializing text"), DEFAULT_TEXT_HEIGHT, v2(0,0), v2(1,1), (Color){1,1,1,1});
 		}		
 
 		if(!is_initialized)
@@ -207,12 +208,19 @@ int entry(int argc, char **argv)
 			app->entities[E_PLAYER_INDEX].pos = v2(0, 0);
 			app->entities[E_PLAYER_INDEX].flags = E_RENDER;
 			app->entities[E_PLAYER_INDEX].unarmed_inventory = get_first_available_index(app->used_items, MAX_ITEMS);
-			app->entities[E_PLAYER_INDEX].already_casted = true;
 			app->entities[E_PLAYER_INDEX].tex_uid = TEX_PLAYER;
 			app->entities[E_PLAYER_INDEX].friction = 5.0f;
 			app->items[app->entities[E_PLAYER_INDEX].unarmed_inventory].inventory.is_editable = true;
 			app->items[app->entities[E_PLAYER_INDEX].unarmed_inventory].inventory.size = 2;
-			app->items[app->entities[E_PLAYER_INDEX].unarmed_inventory].inventory.items[0] = ITEM_SPELL_DESTROY;
+
+			u16 wand_index = get_first_available_index(app->used_items, MAX_ITEMS);
+			app->items[app->entities[E_PLAYER_INDEX].unarmed_inventory].inventory.items[0] = wand_index;
+			app->items[wand_index] = app->items[ITEM_WAND];
+			app->items[wand_index].inventory.size = 2;
+			app->items[wand_index].casting_cd = 1.0f;
+			app->items[wand_index].inventory.items[0] = get_first_available_index(app->used_items, MAX_ITEMS);
+			app->items[app->items[wand_index].inventory.items[0]] = app->items[ITEM_SPELL_DESTROY];
+
 			app->items[app->entities[E_PLAYER_INDEX].unarmed_inventory].inventory.items[1] = 0;
 			app->items[app->entities[E_PLAYER_INDEX].unarmed_inventory].casting_cd = .5f;
 			app->items[app->entities[E_PLAYER_INDEX].unarmed_inventory].not_cycle_when_casting = true;
@@ -576,6 +584,11 @@ int entry(int argc, char **argv)
 					app->entities[E_PLAYER_INDEX].casting_state = CASTING_RIGHT;
 					app->items[equipped_item].inventory.selected_slot = app->items[equipped_item].inventory.size - 1;
 				}
+				if(is_key_just_released(MOUSE_BUTTON_RIGHT))
+				{
+					app->entities[E_PLAYER_INDEX].casting_state = CASTING_NULL;
+					app->items[equipped_item].inventory.selected_slot = 0;
+				}
 
 				#if DEV_TESTING
 					if(is_key_just_pressed(KEY_F1) == 1)
@@ -677,11 +690,17 @@ int entry(int argc, char **argv)
 				}
 
 
-				if(app->entities[e].casting_state != CASTING_NULL 
-				&& !app->entities[e].already_casted)
-				{
-					app->entities[e].already_casted = true;
+				app->entities[e].casting_cd -= fixed_dt;
 
+				if(app->entities[e].casting_state != CASTING_NULL 
+				&& app->entities[e].casting_cd <= 0)
+				{
+					//TODO: why this?
+					if(app->items[casting_item].item_id != ITEM_WAND){
+						app->entities[e].casting_cd = app->items[casting_stack[current_recursion-1]].casting_cd;
+					}else{
+						app->entities[e].casting_cd = app->items[casting_item].casting_cd;
+					}
 					// Item_id spell = app->items[app->items[casting_item].inventory.items[app->items[casting_item].inventory.selected_slot]].item_id;
 
 					if(is_placeable_item(app->items[casting_item].item_id))
@@ -691,10 +710,10 @@ int entry(int argc, char **argv)
 						V2 placing_world_pos = v2_add(app->entities[e].pos, v2_mulf(v2_normalize(app->entities[e].target_relative_pos), target_distance));
 						Int2 placing_tilemap_pos = world_pos_to_tile_pos(placing_world_pos, tiles_px_size);
 
-						if(!app->world[placing_tilemap_pos.y][placing_tilemap_pos.x])
+						if(TILE_NULL == app->world[placing_tilemap_pos.y][placing_tilemap_pos.x].id)
 						{
 							//TODO: placeable objects will have their own tile_uid
-							app->world[placing_tilemap_pos.y][placing_tilemap_pos.x] = 1;
+							app->world[placing_tilemap_pos.y][placing_tilemap_pos.x].id = TILE_STONE;
 							app->items[casting_item].item_count -= 1;
 
 							if(app->items[casting_item].item_count == 0)
@@ -722,7 +741,7 @@ int entry(int argc, char **argv)
 								{
 									V2 test_world_pos = v2_add(current_pos , v2_mulf(v2_normalize(app->entities[e].target_relative_pos), (step*DEFAULT_RANGE/10)));
 									Int2 test_tilemap_pos = world_pos_to_tile_pos(test_world_pos, tiles_px_size);
-									if(app->world[test_tilemap_pos.y][test_tilemap_pos.x])
+									if(TILE_NULL != app->world[test_tilemap_pos.y][test_tilemap_pos.x].id)
 									{
 										destroy_tile(app, test_tilemap_pos, tiles_px_size);
 										break;
@@ -752,49 +771,32 @@ int entry(int argc, char **argv)
 							break;
 						}
 					}
-				}
-
-				//:UPDATING CASTING SPELL
-
-				if(!app->items[casting_item].not_cycle_when_casting // do cycle when casting
-				|| (app->entities[e].already_casted))
-				{
-					app->entities[e].casting_cd -= fixed_dt;
 					
-					if(app->entities[e].casting_cd <= 0)
-					{
-						app->entities[e].casting_cd = app->items[casting_item].casting_cd;
 
-						if(app->entities[e].casting_state != CASTING_RIGHT)
+					if(app->entities[e].casting_state != CASTING_RIGHT && !app->items[casting_item].not_cycle_when_casting)
+					{
+						if(app->items[casting_item].inventory.size != 0 && !app->items[casting_item].not_cycle_when_casting)
 						{
+							app->items[casting_item].inventory.selected_slot = (app->items[casting_item].inventory.selected_slot+1)%app->items[casting_item].inventory.size;
+							u16 new_selected_slot = app->items[casting_item].inventory.selected_slot;
+							app->items[app->items[casting_item].inventory.items[new_selected_slot]].inventory.selected_slot = 0;
+						}
+
+						//:UPDATING SELECTED SLOT
+						while(app->items[casting_item].inventory.selected_slot == 0 && casting_item != equipped_item)
+						{
+							assert(current_recursion > 0);
+							current_recursion--;
+							casting_item = casting_stack[current_recursion];
 							if(app->items[casting_item].inventory.size != 0 && !app->items[casting_item].not_cycle_when_casting)
 							{
 								app->items[casting_item].inventory.selected_slot = (app->items[casting_item].inventory.selected_slot+1)%app->items[casting_item].inventory.size;
-								u16 new_selected_slot = app->items[casting_item].inventory.selected_slot;
-								app->items[app->items[casting_item].inventory.items[new_selected_slot]].inventory.selected_slot = 0;
-							}
-
-							//:UPDATING SELECTED SLOT
-							while(app->items[casting_item].inventory.selected_slot == 0 && casting_item != equipped_item)
-							{
-								assert(current_recursion > 0);
-								current_recursion--;
-								casting_item = casting_stack[current_recursion];
-								if(app->items[casting_item].inventory.size != 0 && !app->items[casting_item].not_cycle_when_casting)
-								{
-									app->items[casting_item].inventory.selected_slot = (app->items[casting_item].inventory.selected_slot+1)%app->items[casting_item].inventory.size;
-									app->items[app->items[casting_item].inventory.items[app->items[casting_item].inventory.selected_slot]].inventory.selected_slot = 0;
-								}
+								app->items[app->items[casting_item].inventory.items[app->items[casting_item].inventory.selected_slot]].inventory.selected_slot = 0;
 							}
 						}
-						if(equipped_item == app->entities[e].unarmed_inventory && app->entities[e].casting_state != CASTING_RIGHT)
-						{
-							app->items[equipped_item].inventory.selected_slot = 0;
-						}
-
-						app->entities[e].already_casted = false;
 					}
 				}
+				
 				app->entities[e].casting_state = CASTING_NULL;
 				
 				UNTIL(e2, MAX_ENTITIES)
@@ -892,7 +894,7 @@ int entry(int argc, char **argv)
 				V2 new_pos = v2_add(app->entities[e].pos, v2_mulf(app->entities[e].velocity, fixed_dt));
 				Int2 tile_pos = world_pos_to_tile_pos(new_pos, tiles_px_size);
 				
-				if(!app->world[tile_pos.y][tile_pos.x]){
+				if(TILE_NULL == app->world[tile_pos.y][tile_pos.x].id){
 					app->entities[e].pos = new_pos;
 				}else{
 					if(app->entities[e].flags & E_DIE_ON_COLLISION)
@@ -930,7 +932,7 @@ int entry(int argc, char **argv)
 			f32 full_target_distance = v2_length(app->entities[E_PLAYER_INDEX].target_relative_pos);
 			f32 target_distance = min(DEFAULT_RANGE, full_target_distance);
 			V2 placing_world_pos = v2_add(app->entities[E_PLAYER_INDEX].pos, v2_mulf(v2_normalize(app->entities[E_PLAYER_INDEX].target_relative_pos), target_distance));
-			
+
 			Int2 placing_tile_pos = world_pos_to_tile_pos(placing_world_pos, tiles_px_size);
 			b8 is_holding_placeable = app->items[app->entities[E_PLAYER_INDEX].inventory.items[app->entities[E_PLAYER_INDEX].inventory.selected_slot]].item_id == ITEM_STONE;
 
@@ -941,7 +943,7 @@ int entry(int argc, char **argv)
 				{
 					f32 x_final_pos = ((f32)(x - WORLD_X_LENGTH/2)*tiles_px_size.x);
 					{
-						if(app->world[y][x] || (is_holding_placeable && x==placing_tile_pos.x && y==placing_tile_pos.y))
+						if(TILE_NULL != app->world[y][x].id || (is_holding_placeable && x==placing_tile_pos.x && y==placing_tile_pos.y))
 						{
 							Color tile_color = {1,1,1,1};
 							// if(x==cursor_tile_pos.x && y==cursor_tile_pos.y){
@@ -1016,7 +1018,7 @@ int entry(int argc, char **argv)
                
                // Tex_info* texinfo;
                // LIST_GET(memory->tex_infos, request->object3d.texinfo_uid, texinfo);
-					draw_text(default_font, app->ui.widgets[i].style.text, 20, 
+					draw_text(default_font, app->ui.widgets[i].style.text, DEFAULT_TEXT_HEIGHT, 
 						app->ui.global_positions[i], 
 						(V2){0.5f, 0.5f},
 						v4(1,1,1,1)
