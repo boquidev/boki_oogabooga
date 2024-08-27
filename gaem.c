@@ -975,6 +975,7 @@ int entry(int argc, char **argv)
 				if(app->entities[e].flags & E_PICKUP)
 				{
 					image_screen_size = v2_mulf(image_screen_size,0.5f);
+					image_screen_size = v2_mulf(image_screen_size, 1+ 0.1f*sinf(10.0f*os_get_elapsed_seconds()));
 				}
 				V2 image_pos = {
 					.x = app->entities[e].pos.x - image_screen_size.x/2,

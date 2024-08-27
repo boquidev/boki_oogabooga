@@ -433,6 +433,10 @@ void destroy_tile(App_data* app, Int2 tile_pos, V2 tiles_screen_size)
 	app->items[new_item_id] = app->items[ITEM_STONE];
 
 	app->entities[e_id].pos = tile_to_pos(tile_pos, tiles_screen_size);
+	app->entities[e_id].friction = 10.0f;
+	f32 t = 40.0f* os_get_elapsed_seconds();
+	V2 vel_direction = v2(cosf(t), sinf(t));
+	app->entities[e_id].velocity = v2_mulf(vel_direction, 30.0f);
 }
 
 string u32_to_string(u32 n, Memory_arena* arena)
