@@ -469,7 +469,7 @@ int entry(int argc, char **argv)
 						}
 						if(app->ui.selection.clicked == do_widget(&app->ui, UI_CLICKABLE, temp_style) && app->items[current_item].inventory.is_editable)
 						{
-							if(app->is_menu_opened && current_item == equipped_item)
+							if(app->is_menu_opened)
 							{
 								if(app->items[app->cursor_item].item_id == app->items[spell_item_uid].item_id
 								&& !app->items[spell_item_uid].inventory.is_editable)
@@ -773,7 +773,7 @@ int entry(int argc, char **argv)
 					}
 					
 
-					if(app->entities[e].casting_state != CASTING_RIGHT && !app->items[casting_item].not_cycle_when_casting)
+					if((app->entities[e].casting_state != CASTING_RIGHT || casting_item != equipped_item) && !app->items[casting_item].not_cycle_when_casting)
 					{
 						if(app->items[casting_item].inventory.size != 0 && !app->items[casting_item].not_cycle_when_casting)
 						{
