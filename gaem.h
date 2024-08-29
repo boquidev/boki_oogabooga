@@ -331,16 +331,14 @@ typedef struct App_data
 u16 get_first_available_index(u8* array, u32 arraylen)
 {
 	assert(arraylen <= 0xffff);
-	u16 temp = 0;
-	u16 current_i = 0;
-
-	UNTIL(i, arraylen)
+	//TODO: start at i=1 cuz the 0 position is usually reserved for null
+	//but for now leave it like this cuz it revealed a bug in another part of the code
+	for(u16 i=0; i<arraylen; i++)
 	{
-		u16 index = (current_i+i)%(u16)arraylen;
-		if(!array[index])
+		if(!array[i])
 		{
-			array[index] = 1;
-			return index;
+			array[i] = 1;
+			return i;
 		}
 	}
 	assert(false);
@@ -483,6 +481,10 @@ u16 get_entity_equipped_item_index(App_data* app, u16 entity_index)
 b8 is_placeable_item(Item_id item_id)
 {
 	return ITEM_PLACEABLE_FIRST < item_id && item_id < ITEM_PLACEABLE_LAST;
+}
+b8 is_spell_item(Item_id item_id)
+{
+	return ITEM_SPELL_NULL < item_id && item_id < ITEM_SPELL_LAST;
 }
 
 V2 calculate_delta_velocity(V2 velocity, V2 acceleration, f32 friction)

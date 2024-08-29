@@ -373,7 +373,9 @@ int entry(int argc, char **argv)
 							u16 current_item = app->entities[E_PLAYER_INDEX].inventory.items[i];
 							if(app->is_menu_opened)
 							{								
-								if(app->items[app->cursor_item].item_id == app->items[current_item].item_id
+								//TODO: extract this into a function cuz it already was causing a bug
+								if(app->cursor_item != ITEM_NULL
+								&& app->items[app->cursor_item].item_id == app->items[current_item].item_id
 								&& !app->items[current_item].inventory.is_editable)
 								{
 									app->items[current_item].item_count += app->items[app->cursor_item].item_count;
@@ -471,7 +473,9 @@ int entry(int argc, char **argv)
 						{
 							if(app->is_menu_opened)
 							{
-								if(app->items[app->cursor_item].item_id == app->items[spell_item_uid].item_id
+								//TODO: extract this into a function cuz it already was causing a bug
+								if(app->cursor_item != ITEM_NULL
+								&& app->items[app->cursor_item].item_id == app->items[spell_item_uid].item_id
 								&& !app->items[spell_item_uid].inventory.is_editable)
 								{
 									app->items[spell_item_uid].item_count += app->items[app->cursor_item].item_count;
@@ -724,15 +728,11 @@ int entry(int argc, char **argv)
 							}
 						}
 					}
-					else
+					else if(is_spell_item(app->items[casting_item].item_id))
 					{
 						Item_id spell = app->items[casting_item].item_id;
 						switch(spell)
 						{
-							case ITEM_NULL:
-							case ITEM_SPELL_NULL:
-							case ITEM_WAND:
-							break;
 							case ITEM_SPELL_DESTROY:
 							{
 								//TODO: axis aligned 2d ray marching
@@ -771,6 +771,10 @@ int entry(int argc, char **argv)
 							break;
 						}
 					}
+					else
+					{
+
+					}
 					
 
 					if((app->entities[e].casting_state != CASTING_RIGHT || casting_item != equipped_item) && !app->items[casting_item].not_cycle_when_casting)
@@ -806,7 +810,6 @@ int entry(int argc, char **argv)
 						//:PICKUP
 						if(app->entities[e].flags & E_PICKUP && !(app->entities[e2].flags & E_PICKUP))
 						{
-							
 							f32 distance = v2_length(v2_sub(app->entities[e2].pos, app->entities[e].pos));
 							if(distance < tiles_px_size.x)
 							{
