@@ -32,23 +32,25 @@ main: //////////////////////////////////////////////////////////////////////////
 	// to do that i need to at least think about some interesting spells that don't revolve around combat
 	// and that are worth putting time to get them
 	// remember that 'no combat' doesn't mean 'no threats/enemies'
-	// spell ideas:
-		// invisibility
-		// light
-		// add impulse/dash
-		// 
+		// spell ideas:
+			// invisibility
+			// light
+			// add impulse/dash
+			// 
 
 	// I will just do my original idea, playtest and check what part of the game people likes the most
-	
-	- add a crafting system
-		- i am thinking of an in-world crafting system
-		where i put items in some tiles/structure (and then throw a spell at it or something?)
-		at least for crafting wands that'd be cool, not  sure if that'd work for everything
+
+	// actually i don't know how to solve crafting, i want to focus on the wand building aspects
+	// so maybe crafting is just a distraction from that
+		// - add a crafting system
+		// 	- i am thinking of an in-world crafting system
+		// 	where i put items in some tiles/structure (and then throw a spell at it or something?)
+		// 	at least for crafting wands that'd be cool, not  sure if that'd work for everything
 		
-		- maybe there are transmutation spells and each spell turns certain items into other stuff
-		or mixes items that can be mixed together
-			- examples: melt turns ores into ingots
-			- "tables" that can hold a spell and cast that spell on the items
+			// - maybe there are transmutation spells and each spell turns certain items into other stuff
+			// or mixes items that can be mixed together
+			// 	- examples: melt turns ores into ingots
+			// 	- "tables" that can hold a spell and cast that spell on the items
 			
 	// how do i get spells
 		// IDEA1
@@ -66,6 +68,11 @@ main: //////////////////////////////////////////////////////////////////////////
 			// maybe that's not a problem for the kind of gameplay that this "thing" will have but we'll see
 			// or maybe i make the world automatically repopulate materials overtime 
 			// instead of the player having to have dedicated farms for materials
+	
+	SIMPLIFY EVERYTHING
+	- no crafting
+	- so think about something with the focus on wand building
+
 			
 	- add modifier spells, which add properties to the next non-modifier spell casted
 		// both of these could be the same 

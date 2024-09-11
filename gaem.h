@@ -122,8 +122,10 @@ typedef enum Entity_flag : u64
 {
    E_RENDER = 0b1,
 	E_PICKUP = 0b10,
-   E_LAST_FLAG = 0b100,
+	E_CAN_PICKUP = 0b100,
 	E_DIE_ON_COLLISION = 0b1000,
+
+   E_LAST_FLAG = 0b10000,
 }Entity_flag;
 
 typedef enum Casting_state : u8

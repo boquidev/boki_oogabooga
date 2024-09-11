@@ -206,7 +206,7 @@ int entry(int argc, char **argv)
 			
 			app->used_entities[E_PLAYER_INDEX] = true;
 			app->entities[E_PLAYER_INDEX].pos = v2(0, 0);
-			app->entities[E_PLAYER_INDEX].flags = E_RENDER;
+			app->entities[E_PLAYER_INDEX].flags = E_RENDER|E_CAN_PICKUP;
 			app->entities[E_PLAYER_INDEX].unarmed_inventory = get_first_available_index(app->used_items, MAX_ITEMS);
 			app->entities[E_PLAYER_INDEX].tex_uid = TEX_PLAYER;
 			app->entities[E_PLAYER_INDEX].friction = 5.0f;
@@ -671,6 +671,7 @@ int entry(int argc, char **argv)
 				//TODO: this will be moving across the spells inventory
 				u16 equipped_item = get_entity_equipped_item_index(app, e);
 				u16 casting_item = equipped_item;
+				//TODO: maybe generalize this
 				u16* casting_item_parent_inventory_slot;
 				if(equipped_item != app->entities[e].unarmed_inventory){
 					casting_item_parent_inventory_slot = &app->entities[e].inventory.items[app->entities[e].inventory.selected_slot];
@@ -808,7 +809,7 @@ int entry(int argc, char **argv)
 					if(app->used_entities[e2] && e != e2)
 					{
 						//:PICKUP
-						if(app->entities[e].flags & E_PICKUP && !(app->entities[e2].flags & E_PICKUP))
+						if(app->entities[e].flags & E_PICKUP && app->entities[e2].flags & E_CAN_PICKUP)
 						{
 							f32 distance = v2_length(v2_sub(app->entities[e2].pos, app->entities[e].pos));
 							if(distance < tiles_px_size.x)
