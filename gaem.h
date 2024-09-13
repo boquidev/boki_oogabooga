@@ -43,7 +43,6 @@ void* arena_push_size(Memory_arena* arena, size_t size)
    assert(arena->used < arena->size);
    return result;
 }
-#define arena_push_struct(arena, struct_type) (struct_type*)arena_push_size(arena, sizeof(struct_type))
 #define arena_push_structs(arena, struct_type, struct_count) (struct_type*)arena_push_size(arena, struct_count*sizeof(struct_type))
 
 typedef char b8;

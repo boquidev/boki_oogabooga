@@ -6,8 +6,8 @@ int entry(int argc, char **argv)
 {
 	u32 counter	= 0;
 	window.title = STR("Minimal Game Example");
-	window.scaled_width = 1280; // We need to set the scaled size if we want to handle system scaling (DPI)
-	window.scaled_height = 720; 
+	window.pixel_width = 1280; // We need to set the scaled size if we want to handle system scaling (DPI)
+	window.pixel_height = 720; 
 	window.x = 200;
 	window.y = 90;
 	window.clear_color = v4(.5, .5, .5, 1);
@@ -69,7 +69,7 @@ int entry(int argc, char **argv)
 	}
 
 	// App_data* app = (App_data*)arena_push_size(&permanent_arena, )
-	App_data* app = arena_push_struct(&permanent_arena, App_data);
+	App_data* app = arena_push_structs(&permanent_arena, App_data, 0);
 
 	b8 is_initialized = 0;
 
