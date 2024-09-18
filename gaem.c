@@ -98,7 +98,9 @@ int entry(int argc, char **argv)
 
 		
 
-		if(is_key_just_pressed(KEY_F5) && is_key_down(KEY_SHIFT))
+		if((is_key_just_pressed(KEY_F5) && is_key_down(KEY_SHIFT))
+		||	(is_key_just_pressed(KEY_F4) && is_key_down(KEY_ALT))
+		)
 		{
 			window.should_close = true;
 		}
@@ -171,6 +173,7 @@ int entry(int argc, char **argv)
 					case ITEM_PLACEABLE_FIRST:
 					case ITEM_PLACEABLE_LAST:
 					case ITEM_LAST_ID:
+					case ITEM_SPELL_MODIFIER_SPELLS:
 					case ITEM_SPELL_LAST: 
 					break;
 					
@@ -223,7 +226,7 @@ int entry(int argc, char **argv)
 
 			app->items[app->entities[E_PLAYER_INDEX].unarmed_inventory].inventory.items[1] = 0;
 			app->items[app->entities[E_PLAYER_INDEX].unarmed_inventory].casting_cd = .5f;
-			app->items[app->entities[E_PLAYER_INDEX].unarmed_inventory].not_cycle_when_casting = true;
+			// app->items[app->entities[E_PLAYER_INDEX].unarmed_inventory].not_cycle_when_casting = true;
 
 		}
 		if(is_key_just_pressed('T'))
@@ -736,18 +739,19 @@ int entry(int argc, char **argv)
 						{
 							case ITEM_SPELL_DESTROY:
 							{
-								//TODO: axis aligned 2d ray marching
-								V2 current_pos = app->entities[e].pos;
-								UNTIL(step, 10)
-								{
-									V2 test_world_pos = v2_add(current_pos , v2_mulf(v2_normalize(app->entities[e].target_relative_pos), (step*DEFAULT_RANGE/10)));
-									Int2 test_tilemap_pos = world_pos_to_tile_pos(test_world_pos, tiles_px_size);
-									if(TILE_NULL != app->world[test_tilemap_pos.y][test_tilemap_pos.x].id)
-									{
-										destroy_tile(app, test_tilemap_pos, tiles_px_size);
-										break;
-									}
-								}
+								app->entities[e].casting_modifiers.flags |= CASTING_FLAG_DESTROYS_TILES;
+								// //TODO: axis aligned 2d ray marching
+								// V2 current_pos = app->entities[e].pos;
+								// UNTIL(step, 10)
+								// {
+								// 	V2 test_world_pos = v2_add(current_pos , v2_mulf(v2_normalize(app->entities[e].target_relative_pos), (step*DEFAULT_RANGE/10)));
+								// 	Int2 test_tilemap_pos = world_pos_to_tile_pos(test_world_pos, tiles_px_size);
+								// 	if(TILE_NULL != app->world[test_tilemap_pos.y][test_tilemap_pos.x].id)
+								// 	{
+								// 		destroy_tile(app, test_tilemap_pos, tiles_px_size);
+								// 		break;
+								// 	}
+								// }
 							}
 							break;
 							case ITEM_SPELL_PROJECTILE:
@@ -760,6 +764,8 @@ int entry(int argc, char **argv)
 								app->entities[new_entity_uid].friction = 4.0f;
 								app->entities[new_entity_uid].accel = v2_mulf(v2_normalize(app->entities[e].target_relative_pos), 4.0f);
 								app->entities[new_entity_uid].lifetime = 1.0f;
+								if(app->entities[e].casting_modifiers.flags & CASTING_FLAG_DESTROYS_TILES)
+									app->entities[new_entity_uid].flags |= E_DESTROYS_TILES;
 							}
 							break;
 							case ITEM_SPELL_DASH:
@@ -771,10 +777,17 @@ int entry(int argc, char **argv)
 								assert(false, "unknown spell id");
 							break;
 						}
+
 					}
 					else
 					{
 
+					}
+
+					if((is_spell_item(app->items[casting_item].item_id) && !is_modifier_spell(app->items[casting_item].item_id)) 
+					|| app->items[equipped_item].inventory.selected_slot == app->items[equipped_item].inventory.size-1)
+					{
+						app->entities[e].casting_modifiers.flags = 0;
 					}
 					
 
@@ -903,9 +916,14 @@ int entry(int argc, char **argv)
 				}else{
 					if(app->entities[e].flags & E_DIE_ON_COLLISION)
 					{
+						// DESTROY TILE
+						if(app->entities[e].flags & E_DESTROYS_TILES)
+							destroy_tile(app, tile_pos, tiles_px_size);
+
 						// DESTROY ENTITY
 						app->used_entities[e] = 0;
 						ZERO_STRUCT(app->entities[e]);
+
 					}
 				}
 			}

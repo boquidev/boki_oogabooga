@@ -93,14 +93,20 @@ typedef enum Item_id : u16
 	ITEM_PLACEABLE_FIRST,
 	ITEM_STONE,
 	ITEM_PLACEABLE_LAST,
+	ITEM_WAND,
+
+	// SPELLS
 
 	ITEM_SPELL_NULL,
-	ITEM_SPELL_DESTROY,
+
 	ITEM_SPELL_PROJECTILE,
 	ITEM_SPELL_DASH,
-	ITEM_SPELL_LAST,
 
-	ITEM_WAND,
+	ITEM_SPELL_MODIFIER_SPELLS,
+
+	ITEM_SPELL_DESTROY,
+
+	ITEM_SPELL_LAST,
 
 	ITEM_LAST_ID
 }Item_id;
@@ -119,12 +125,13 @@ typedef struct Item
 
 typedef enum Entity_flag : u64
 {
-   E_RENDER = 0b1,
-	E_PICKUP = 0b10,
-	E_CAN_PICKUP = 0b100,
-	E_DIE_ON_COLLISION = 0b1000,
+   E_RENDER = 1,
+	E_PICKUP = 1 << 1,
+	E_CAN_PICKUP = 1 << 2,
+	E_DIE_ON_COLLISION = 1 << 3,
+	E_DESTROYS_TILES = 1 << 4,
 
-   E_LAST_FLAG = 0b10000,
+   E_LAST_FLAG = 1 << 5,
 }Entity_flag;
 
 typedef enum Casting_state : u8
@@ -133,6 +140,12 @@ typedef enum Casting_state : u8
 	CASTING_LEFT,
 	CASTING_RIGHT,
 }Casting_state;
+
+typedef enum Casting_flags : u64
+{
+	CASTING_FLAG_DESTROYS_TILES = 1,
+	CASTING_FLAG_LAST = 1 << 2,
+}Casting_flags;
 
 typedef struct Entity
 {
@@ -156,6 +169,11 @@ typedef struct Entity
 	f32 casting_cd;
 	b8 stop_cycling;
 	Casting_state casting_state;
+	struct 
+	{
+		// here are the properties that the modifier spells have added
+		u64 flags;
+	}casting_modifiers;
 	
 	Inventory inventory;
 	u16 unarmed_inventory;
@@ -483,9 +501,14 @@ b8 is_placeable_item(Item_id item_id)
 {
 	return ITEM_PLACEABLE_FIRST < item_id && item_id < ITEM_PLACEABLE_LAST;
 }
+
 b8 is_spell_item(Item_id item_id)
 {
 	return ITEM_SPELL_NULL < item_id && item_id < ITEM_SPELL_LAST;
+}
+b8 is_modifier_spell(Item_id item_id)
+{
+	return ITEM_SPELL_MODIFIER_SPELLS < item_id && item_id < ITEM_SPELL_LAST;
 }
 
 V2 calculate_delta_velocity(V2 velocity, V2 acceleration, f32 friction)
